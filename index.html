@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lab Capsule Timeline UI</title>
+    <title>Lab Google Calendar Style Timeline</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -13,9 +13,7 @@
                     colors: {
                         darkBg: '#121316',
                         cardBg: '#1c1e22',
-                        capsuleBg: '#2a2d34',
-                        accentBlue: '#3b82f6',
-                        accentPurple: '#a855f7',
+                        gridBorder: '#2d3139',
                     }
                 }
             }
@@ -31,26 +29,26 @@
         ::-webkit-scrollbar-thumb { background: #2b2d31; border-radius: 4px; }
     </style>
 </head>
-<body class="min-h-screen pb-20">
+<body class="min-h-screen pb-16">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        const ICONS = ['⏰', '🚗', '🧫', '🔬', '🧪', '⏳', '💉', '🧊', '🌡️', '🥼', '🧬', '📊'];
+        const ICONS = ['🧫', '🔬', '🧪', '⏳', '💉', '🧊', '🌡️', '🥼', '🧬', '📊', '⏰', '🚗'];
+        const HOUR_HEIGHT = 60; // 1 hour = 60px high in timeline
 
         const TRANSLATIONS = {
           th: {
-            title: "Lab Capsule Timeline",
-            addBtn: "+ Add Task",
-            actionType: "Action",
-            incubateType: "Incubate",
+            title: "🔬 Lab Schedule Calendar View",
+            addBtn: "+ เพิ่มงาน",
+            actionType: "🛠️ ทำงาน",
+            incubateType: "⏳ รอ",
             start: "เริ่ม:",
             end: "เสร็จ:",
             duration: "ระยะเวลา:",
-            hrs: "hrs",
-            mins: "min",
-            freeTime: "Free time",
+            hrs: "ชม.",
+            mins: "นาที",
             notesLabel: "📝 โน้ตรายละเอียด / สารเคมี:",
             deleteBtn: "🗑️ ลบขั้นตอน",
             editBtn: "✏️ แก้ไขข้อมูล",
@@ -66,17 +64,16 @@
             save: "บันทึก"
           },
           en: {
-            title: "Lab Capsule Timeline",
+            title: "🔬 Lab Schedule Calendar View",
             addBtn: "+ Add Task",
-            actionType: "Action",
-            incubateType: "Incubate",
+            actionType: "🛠️ Work",
+            incubateType: "⏳ Wait",
             start: "Start:",
             end: "End:",
             duration: "Duration:",
             hrs: "hrs",
             mins: "min",
-            freeTime: "Free time",
-            notesLabel: "📝 Reagents / Notes:",
+            notesLabel: "📝 Details / Reagents Notes:",
             deleteBtn: "🗑️ Delete Step",
             editBtn: "✏️ Edit Step",
             confirmDelete: "Delete this step?",
@@ -95,33 +92,33 @@
         const DEFAULT_STEPS = [
           {
             id: 'step-1',
-            title: 'Rise and Shine (เตรียม Cell)',
-            icon: '⏰',
+            title: 'เลี้ยงเซลล์ลง Plate (Plate A)',
+            icon: '🧫',
             type: 'action',
-            startTime: new Date(new Date().setHours(7, 30, 0, 0)).toISOString().slice(0, 16),
+            startTime: new Date(new Date().setHours(8, 0, 0, 0)).toISOString().slice(0, 16),
             hours: 1,
             minutes: 30,
-            notes: 'เตรียม Cell Culture Plate'
+            notes: 'ใช้ 6-well plate A'
           },
           {
             id: 'step-2',
-            title: 'Work from wild grill restaurant (Incubate ยาว)',
-            icon: '🚗',
+            title: 'บ่มตัวอย่างในตู้อบ (Incubation)',
+            icon: '⏳',
             type: 'incubate',
-            startTime: new Date(new Date().setHours(12, 0, 0, 0)).toISOString().slice(0, 16),
-            hours: 2,
-            minutes: 30,
-            notes: 'บ่มตัวอย่างสารในตู้อบ 2.5 ชม.'
+            startTime: new Date(new Date().setHours(10, 0, 0, 0)).toISOString().slice(0, 16),
+            hours: 3,
+            minutes: 0,
+            notes: 'บ่มเซลล์ 3 ชั่วโมง ที่ 37°C'
           },
           {
             id: 'step-3',
-            title: 'Parallel Buffer Prep (งานทำซ้อน)',
+            title: 'เตรียม Solution B (งานซ้อนเวลากัน)',
             icon: '🧪',
             type: 'action',
-            startTime: new Date(new Date().setHours(13, 0, 0, 0)).toISOString().slice(0, 16),
+            startTime: new Date(new Date().setHours(11, 0, 0, 0)).toISOString().slice(0, 16),
             hours: 1,
-            minutes: 0,
-            notes: 'เตรียม Solution ซ้อนช่วง 13:00'
+            minutes: 30,
+            notes: 'เตรียมสารซ้อนช่วงรอ Incubate'
           }
         ];
 
@@ -130,7 +127,7 @@
           const t = TRANSLATIONS[lang];
 
           const [steps, setSteps] = useState(() => {
-            const saved = localStorage.getItem('lab_capsule_timeline_v4');
+            const saved = localStorage.getItem('lab_gcalendar_timeline_v5');
             return saved ? JSON.parse(saved) : DEFAULT_STEPS;
           });
 
@@ -149,43 +146,52 @@
           });
 
           useEffect(() => {
-            localStorage.setItem('lab_capsule_timeline_v4', JSON.stringify(steps));
+            localStorage.setItem('lab_gcalendar_timeline_v5', JSON.stringify(steps));
           }, [steps]);
 
-          // Multi-Column Overlap Algorithm
-          const columns = useMemo(() => {
-            const sorted = steps.map(step => {
+          // Process Google Calendar Day-Grid Overlap Positioning
+          const processedTasks = useMemo(() => {
+            const items = steps.map(step => {
               const start = new Date(step.startTime);
               const durationMins = (parseInt(step.hours || 0) * 60) + parseInt(step.minutes || 0);
               const end = new Date(start.getTime() + durationMins * 60 * 1000);
+              
+              const startMinutesFromMidnight = start.getHours() * 60 + start.getMinutes();
+              const topPx = (startMinutesFromMidnight / 60) * HOUR_HEIGHT;
+              const heightPx = Math.max(35, (durationMins / 60) * HOUR_HEIGHT);
+
               return {
                 ...step,
                 startDateObj: start,
                 endDateObj: end,
-                durationMins
+                durationMins,
+                topPx,
+                heightPx
               };
             }).sort((a, b) => a.startDateObj - b.startDateObj);
 
-            if (sorted.length === 0) return [];
-
-            const cols = [];
-            sorted.forEach(task => {
-              let placed = false;
-              for (let col of cols) {
-                const lastTaskInCol = col[col.length - 1];
-                if (task.startDateObj >= lastTaskInCol.endDateObj) {
-                  col.push(task);
-                  placed = true;
-                  break;
+            // Calculate Overlaps for Side-by-Side placement
+            for (let i = 0; i < items.length; i++) {
+              let overlapGroup = [items[i]];
+              for (let j = 0; j < items.length; j++) {
+                if (i !== j) {
+                  const a = items[i];
+                  const b = items[j];
+                  if (a.startDateObj < b.endDateObj && a.endDateObj > b.startDateObj) {
+                    overlapGroup.push(b);
+                  }
                 }
               }
-              if (!placed) {
-                cols.push([task]);
-              }
-            });
+              overlapGroup.sort((a, b) => a.id.localeCompare(b.id));
+              const colIndex = overlapGroup.findIndex(item => item.id === items[i].id);
+              items[i].totalCols = overlapGroup.length;
+              items[i].colIndex = colIndex;
+            }
 
-            return cols;
+            return items;
           }, [steps]);
+
+          const hoursList = Array.from({ length: 24 }, (_, i) => i);
 
           const formatTime = (date) => {
             if (!date || isNaN(date.getTime())) return '--:--';
@@ -236,103 +242,90 @@
           };
 
           return (
-            <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+            <div className="max-w-4xl mx-auto px-3 sm:px-4 py-6 space-y-4">
               
               {/* Header */}
-              <div className="flex justify-between items-center bg-[#1c1e22] border border-gray-800/80 p-4 rounded-3xl shadow-2xl">
+              <div className="flex justify-between items-center bg-[#1c1e22] border border-gray-800 p-4 rounded-2xl shadow-xl">
                 <div>
-                  <h1 className="font-bold text-lg text-white tracking-wide">{t.title}</h1>
-                  <p className="text-xs text-gray-400">Minimal Capsule UI + Multi-Column Overlap</p>
+                  <h1 className="font-bold text-base sm:text-lg text-white">{t.title}</h1>
+                  <p className="text-xs text-blue-400">Google Calendar Style • Overlap View</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
-                    className="px-3 py-1.5 bg-[#2a2d34] text-xs font-bold text-gray-300 rounded-full border border-gray-700/60"
+                    className="px-2.5 py-1 bg-gray-800 text-xs font-bold text-gray-300 rounded-lg border border-gray-700"
                   >
                     🌐 {lang === 'th' ? 'EN' : 'TH'}
                   </button>
                   <button
                     onClick={() => handleOpenForm(null)}
-                    className="px-4 py-2 bg-[#f87171]/20 hover:bg-[#f87171]/30 text-[#f87171] font-semibold text-xs rounded-full border border-[#f87171]/40 shadow-lg transition"
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg"
                   >
-                    + Add Task
+                    {t.addBtn}
                   </button>
                 </div>
               </div>
 
-              {/* Timeline Container */}
-              <div className="bg-[#121316] border border-gray-800/60 rounded-3xl p-4 sm:p-8 shadow-2xl overflow-x-auto">
-                <div className="flex gap-10 min-w-max">
+              {/* Google Calendar Time Grid Container */}
+              <div className="bg-[#1c1e22] border border-gray-800 rounded-2xl shadow-2xl p-2 sm:p-4 overflow-y-auto max-h-[75vh]">
+                <div className="relative min-w-[320px]" style={{ height: `${24 * HOUR_HEIGHT}px` }}>
                   
-                  {columns.length === 0 && (
-                    <div className="text-center py-12 text-gray-500 text-sm w-full">
-                      กดปุ่ม "+ Add Task" เพื่อเพิ่มขั้นตอนการทดลอง
-                    </div>
-                  )}
-
-                  {columns.map((colTasks, colIdx) => (
-                    <div key={colIdx} className="flex gap-4 items-start">
-                      
-                      {/* Column Separator if Multi-column */}
-                      {colIdx > 0 && <div className="w-[1px] bg-gray-800/60 self-stretch my-4"></div>}
-
-                      {/* Single Timeline Line Container */}
-                      <div className="relative pl-16 pr-4 space-y-12">
-                        
-                        {/* Dashed Timeline Vertical Line */}
-                        <div className="absolute left-[28px] top-4 bottom-4 w-[2px] border-l-2 border-dashed border-gray-700/60"></div>
-
-                        {colTasks.map((step) => {
-                          const hrs = Math.floor(step.durationMins / 60);
-                          const mins = step.durationMins % 60;
-                          
-                          // Dynamic height for capsule based on duration
-                          const capsuleHeightPx = Math.max(70, Math.floor((step.durationMins / 60) * 55));
-
-                          return (
-                            <div key={step.id} className="relative flex items-center group">
-                              
-                              {/* Left Side Time Indicator */}
-                              <div className="absolute -left-16 text-[11px] font-mono font-medium text-gray-400 select-none">
-                                {formatTime(step.startDateObj)}
-                              </div>
-
-                              {/* Vertical Capsule Node (Like Image) */}
-                              <div
-                                onClick={() => setSelectedStepForDetail(step)}
-                                style={{ height: `${capsuleHeightPx}px` }}
-                                className="relative z-10 w-14 rounded-full bg-[#2a2d34] border border-gray-600/40 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:scale-105 transition-all shadow-xl shrink-0"
-                              >
-                                <span className="text-xl">{step.icon || '⏰'}</span>
-                              </div>
-
-                              {/* Right Side Task Details (Horizontal Layout) */}
-                              <div 
-                                onClick={() => setSelectedStepForDetail(step)}
-                                className="ml-5 cursor-pointer max-w-xs sm:max-w-sm"
-                              >
-                                {/* Time & Duration Header */}
-                                <div className="text-xs font-mono text-gray-400 flex items-center gap-2">
-                                  <span>{formatTime(step.startDateObj)} – {formatTime(step.endDateObj)}</span>
-                                  <span className="text-gray-500">
-                                    ({hrs > 0 && `${hrs} hrs, `}{mins} min)
-                                  </span>
-                                </div>
-
-                                {/* Task Title */}
-                                <h3 className="text-sm font-bold text-white mt-0.5 tracking-wide line-clamp-2 hover:text-blue-400 transition">
-                                  {step.title}
-                                </h3>
-                              </div>
-
-                            </div>
-                          );
-                        })}
-
-                      </div>
-
+                  {/* Hour Lines & Labels */}
+                  {hoursList.map(hour => (
+                    <div 
+                      key={hour} 
+                      className="absolute left-0 right-0 border-t border-gray-800/60 flex items-start"
+                      style={{ top: `${hour * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT}px` }}
+                    >
+                      <span className="text-[10px] font-mono text-gray-500 w-12 shrink-0 -mt-2">
+                        {String(hour).padStart(2, '0')}:00
+                      </span>
                     </div>
                   ))}
+
+                  {/* Tasks Positioned as Cards on Time Grid */}
+                  <div className="absolute left-12 right-0 top-0 bottom-0">
+                    {processedTasks.map(task => {
+                      const isIncubate = task.type === 'incubate';
+                      const widthPct = 100 / task.totalCols;
+                      const leftPct = task.colIndex * widthPct;
+
+                      return (
+                        <div
+                          key={task.id}
+                          onClick={() => setSelectedStepForDetail(task)}
+                          style={{
+                            top: `${task.topPx}px`,
+                            height: `${task.heightPx}px`,
+                            left: `${leftPct}%`,
+                            width: `calc(${widthPct}% - 4px)`
+                          }}
+                          className={`absolute rounded-xl border p-2 cursor-pointer transition transform hover:z-30 hover:scale-[1.01] shadow-lg flex items-start gap-2 overflow-hidden ${
+                            isIncubate 
+                              ? 'bg-purple-950/80 border-purple-500/50 text-purple-100 hover:border-purple-400' 
+                              : 'bg-blue-950/80 border-blue-500/50 text-blue-100 hover:border-blue-400'
+                          }`}
+                        >
+                          {/* Main Visual Icon */}
+                          <div className={`p-1 rounded-lg text-lg sm:text-xl shrink-0 ${
+                            isIncubate ? 'bg-purple-900/60' : 'bg-blue-900/60'
+                          }`}>
+                            {task.icon || '🧫'}
+                          </div>
+
+                          {/* Task Info */}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1">
+                              <span className="font-bold text-xs truncate">{task.title}</span>
+                            </div>
+                            <div className="text-[10px] font-mono opacity-80 truncate">
+                              {formatTime(task.startDateObj)} - {formatTime(task.endDateObj)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
 
                 </div>
               </div>
@@ -340,10 +333,10 @@
               {/* Detail Pop-up Modal */}
               {selectedStepForDetail && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-[#1c1e22] border border-gray-800 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl">
+                  <div className="bg-[#1c1e22] border border-gray-800 rounded-2xl p-5 w-full max-w-md space-y-4 shadow-2xl">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-[#2a2d34] border border-gray-700 flex items-center justify-center text-2xl shadow-inner">
+                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-2xl">
                           {selectedStepForDetail.icon}
                         </div>
                         <div>
@@ -356,7 +349,7 @@
                       <button onClick={() => setSelectedStepForDetail(null)} className="text-gray-400 hover:text-white">✕</button>
                     </div>
 
-                    <div className="bg-[#121316] p-4 rounded-2xl border border-gray-800/80 space-y-2 text-xs">
+                    <div className="bg-[#121316] p-3.5 rounded-xl border border-gray-800 space-y-2 text-xs">
                       <div className="flex justify-between">
                         <span className="text-gray-400">{t.start}</span>
                         <span className="font-mono text-blue-400 font-bold">
@@ -378,7 +371,7 @@
                     </div>
 
                     {selectedStepForDetail.notes && (
-                      <div className="p-3.5 bg-[#121316]/60 rounded-2xl border border-gray-800/80 text-xs text-gray-300">
+                      <div className="p-3 bg-[#121316]/60 rounded-xl border border-gray-800 text-xs text-gray-300">
                         <span className="text-gray-400 font-bold block mb-1">{t.notesLabel}</span>
                         {selectedStepForDetail.notes}
                       </div>
@@ -387,7 +380,7 @@
                     <div className="flex justify-between items-center pt-2 border-t border-gray-800">
                       <button
                         onClick={() => handleDeleteStep(selectedStepForDetail.id)}
-                        className="px-4 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs rounded-full font-medium"
+                        className="px-3 py-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs rounded-xl"
                       >
                         {t.deleteBtn}
                       </button>
@@ -397,7 +390,7 @@
                           setSelectedStepForDetail(null);
                           handleOpenForm(target);
                         }}
-                        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium rounded-full shadow-lg"
+                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium rounded-xl"
                       >
                         {t.editBtn}
                       </button>
@@ -409,7 +402,7 @@
               {/* Add / Edit Form Modal */}
               {isFormOpen && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-[#1c1e22] border border-gray-800 rounded-3xl p-6 w-full max-w-md space-y-4">
+                  <div className="bg-[#1c1e22] border border-gray-800 rounded-2xl p-5 w-full max-w-md space-y-4">
                     <h3 className="text-base font-bold text-white">
                       {editingStep ? t.formEditTitle : t.formAddTitle}
                     </h3>
@@ -422,7 +415,7 @@
                           required
                           value={formData.title}
                           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-3 text-sm text-white focus:outline-none focus:border-blue-500"
+                          className="w-full bg-[#121316] border border-gray-800 rounded-xl p-2.5 text-sm text-white"
                         />
                       </div>
 
@@ -434,8 +427,8 @@
                               key={ico}
                               type="button"
                               onClick={() => setFormData({ ...formData, icon: ico })}
-                              className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg border shrink-0 transition ${
-                                formData.icon === ico ? 'bg-blue-600 border-blue-400 text-white' : 'bg-[#121316] border-gray-800 text-gray-300'
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border shrink-0 ${
+                                formData.icon === ico ? 'bg-blue-600 border-blue-400' : 'bg-[#121316] border-gray-800'
                               }`}
                             >
                               {ico}
@@ -450,7 +443,7 @@
                           <select
                             value={formData.type}
                             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                            className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-2.5 text-xs text-white"
+                            className="w-full bg-[#121316] border border-gray-800 rounded-xl p-2 text-sm text-white"
                           >
                             <option value="action">{t.actionType}</option>
                             <option value="incubate">{t.incubateType}</option>
@@ -464,7 +457,7 @@
                             required
                             value={formData.startTime}
                             onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                            className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-2.5 text-xs text-white"
+                            className="w-full bg-[#121316] border border-gray-800 rounded-xl p-2 text-xs text-white"
                           />
                         </div>
                       </div>
@@ -477,7 +470,7 @@
                             min="0"
                             value={formData.hours}
                             onChange={(e) => setFormData({ ...formData, hours: parseInt(e.target.value) || 0 })}
-                            className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-2.5 text-sm text-white"
+                            className="w-full bg-[#121316] border border-gray-800 rounded-xl p-2 text-sm text-white"
                           />
                         </div>
                         <div>
@@ -488,7 +481,7 @@
                             max="59"
                             value={formData.minutes}
                             onChange={(e) => setFormData({ ...formData, minutes: parseInt(e.target.value) || 0 })}
-                            className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-2.5 text-sm text-white"
+                            className="w-full bg-[#121316] border border-gray-800 rounded-xl p-2 text-sm text-white"
                           />
                         </div>
                       </div>
@@ -499,13 +492,13 @@
                           rows={2}
                           value={formData.notes}
                           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                          className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-3 text-sm text-white"
+                          className="w-full bg-[#121316] border border-gray-800 rounded-xl p-2.5 text-sm text-white"
                         />
                       </div>
 
                       <div className="flex justify-end gap-2 pt-2 border-t border-gray-800">
-                        <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 bg-gray-800 text-xs text-gray-300 rounded-full">{t.cancel}</button>
-                        <button type="submit" className="px-5 py-2 bg-blue-600 text-xs text-white rounded-full font-medium shadow-lg">{t.save}</button>
+                        <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 bg-gray-800 text-xs text-gray-300 rounded-xl">{t.cancel}</button>
+                        <button type="submit" className="px-4 py-2 bg-blue-600 text-xs text-white rounded-xl font-medium">{t.save}</button>
                       </div>
                     </form>
                   </div>
