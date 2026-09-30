@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lab Interactive Visual Timeline</title>
+    <title>Lab Proportional Visual Timeline</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -13,8 +13,6 @@
                     colors: {
                         darkBg: '#090d16',
                         cardBg: '#111827',
-                        accentBlue: '#3b82f6',
-                        accentPurple: '#8b5cf6',
                     }
                 }
             }
@@ -35,6 +33,65 @@
 
         const ICONS = ['🧫', '🔬', '🧪', '⏳', '💉', '🧊', '🌡️', '🥼', '🧬', '📊'];
 
+        const TRANSLATIONS = {
+          th: {
+            title: "🔬 Lab Proportional Timeline",
+            subTitle: "แสดงความยาวตามเวลาจริง + สเกลชั่วโมง + ช่องเวลาว่าง",
+            addBtn: "+ เพิ่มขั้นตอน",
+            timelineHeader: "📍 ไทม์ไลน์สเกลเวลาจริง (คลิกที่ไอคอนเพื่อดูรายละเอียด)",
+            actionType: "👨‍🔬 งานลงมือทำ (Action)",
+            incubateType: "⏳ เวลาบ่ม/รอ (Incubation)",
+            start: "เริ่ม:",
+            end: "เสร็จ:",
+            duration: "ระยะเวลา:",
+            hrs: "ชม.",
+            mins: "นาที",
+            freeTime: "🌱 ช่วงเวลาว่าง (ไม่มีแล็บ)",
+            detailTitle: "รายละเอียดขั้นตอน",
+            notesLabel: "📝 โน้ตรายละเอียด / สารเคมี:",
+            deleteBtn: "🗑️ ลบขั้นตอน",
+            editBtn: "✏️ แก้ไขข้อมูล",
+            confirmDelete: "คุณต้องการลบขั้นตอนการทดลองนี้ใช่หรือไม่?",
+            formAddTitle: "➕ เพิ่มขั้นตอนการทดลอง",
+            formEditTitle: "✏️ แก้ไขขั้นตอนการทดลอง",
+            taskTitleLabel: "ชื่อขั้นตอน *",
+            iconLabel: "เลือกไอคอนสัญลักษณ์",
+            typeLabel: "ประเภทงาน",
+            startTimeLabel: "เวลาเริ่ม (Start Time) *",
+            notesFormLabel: "บันทึกเพิ่มเติม / สารเคมี / ข้อควรระวัง",
+            cancel: "ยกเลิก",
+            save: "บันทึก"
+          },
+          en: {
+            title: "🔬 Lab Proportional Timeline",
+            subTitle: "Real-time Scale + Hour Markers + Free Time Display",
+            addBtn: "+ Add Step",
+            timelineHeader: "📍 Proportional Scale Timeline (Click icon for details)",
+            actionType: "👨‍🔬 Action Step",
+            incubateType: "⏳ Incubation / Wait",
+            start: "Start:",
+            end: "End:",
+            duration: "Duration:",
+            hrs: "hrs",
+            mins: "mins",
+            freeTime: "🌱 Free Time (No Lab)",
+            detailTitle: "Step Details",
+            notesLabel: "📝 Details / Reagents Notes:",
+            deleteBtn: "🗑️ Delete Step",
+            editBtn: "✏️ Edit Step",
+            confirmDelete: "Are you sure you want to delete this step?",
+            formAddTitle: "➕ Add Experiment Step",
+            formEditTitle: "✏️ Edit Experiment Step",
+            taskTitleLabel: "Step Title *",
+            iconLabel: "Select Icon",
+            typeLabel: "Step Type",
+            startTimeLabel: "Start Time *",
+            notesFormLabel: "Notes / Reagent Details / Warnings",
+            cancel: "Cancel",
+            save: "Save"
+          }
+        };
+
         const DEFAULT_STEPS = [
           {
             id: 'step-1',
@@ -44,7 +101,7 @@
             startTime: new Date(new Date().setHours(10, 0, 0, 0)).toISOString().slice(0, 16),
             hours: 2,
             minutes: 0,
-            notes: 'ใช้ 6-well plate, Density 1x10^5 cells/well เตรียมสื่อเลี้ยงเซลล์ DMEM + 10% FBS'
+            notes: 'ใช้ 6-well plate, Density 1x10^5 cells/well'
           },
           {
             id: 'step-2',
@@ -54,24 +111,26 @@
             startTime: new Date(new Date().setHours(12, 0, 0, 0)).toISOString().slice(0, 16),
             hours: 16,
             minutes: 0,
-            notes: 'ตั้งค่าตู้ CO2 Incubator ที่ 37°C, 5% CO2 ห้ามเปิดตู้นาน'
+            notes: 'ตู้ CO2 Incubator 37°C, 5% CO2'
           },
           {
             id: 'step-3',
             title: 'Drug Treatment (เริ่มใส่สารทดลอง)',
             icon: '💉',
             type: 'action',
-            startTime: new Date(new Date(Date.now() + 86400000).setHours(4, 0, 0, 0)).toISOString().slice(0, 16),
+            startTime: new Date(new Date(Date.now() + 86400000).setHours(8, 0, 0, 0)).toISOString().slice(0, 16),
             hours: 1,
             minutes: 30,
-            notes: 'ใส่สารกลุ่ม Sample A และ B ละลายใน DMSO ความเข้มข้น 10 uM'
+            notes: 'ใส่สารกลุ่ม Sample A ความเข้มข้น 10 uM'
           }
         ];
 
         function App() {
           const [lang, setLang] = useState('th');
+          const t = TRANSLATIONS[lang];
+
           const [steps, setSteps] = useState(() => {
-            const saved = localStorage.getItem('lab_visual_timeline_v1');
+            const saved = localStorage.getItem('lab_proportional_timeline_v2');
             return saved ? JSON.parse(saved) : DEFAULT_STEPS;
           });
 
@@ -90,30 +149,55 @@
           });
 
           useEffect(() => {
-            localStorage.setItem('lab_visual_timeline_v1', JSON.stringify(steps));
+            localStorage.setItem('lab_proportional_timeline_v2', JSON.stringify(steps));
           }, [steps]);
 
-          // Process schedule and sort by Start Time
-          const sortedTimeline = useMemo(() => {
-            return steps.map(step => {
+          // Process timeline and build gaps (Free Time)
+          const timelineBlocks = useMemo(() => {
+            const processed = steps.map(step => {
               const start = new Date(step.startTime);
-              const durationMs = ((parseInt(step.hours || 0) * 60) + parseInt(step.minutes || 0)) * 60 * 1000;
-              const end = new Date(start.getTime() + durationMs);
+              const durationMins = (parseInt(step.hours || 0) * 60) + parseInt(step.minutes || 0);
+              const end = new Date(start.getTime() + durationMins * 60 * 1000);
               return {
                 ...step,
                 startDateObj: start,
                 endDateObj: end,
+                durationMins,
+                isGap: false
               };
             }).sort((a, b) => a.startDateObj - b.startDateObj);
+
+            // Inject Free Time Gaps
+            const blocks = [];
+            for (let i = 0; i < processed.length; i++) {
+              const current = processed[i];
+              if (i > 0) {
+                const prev = processed[i - 1];
+                const gapMs = current.startDateObj - prev.endDateObj;
+                const gapMins = Math.floor(gapMs / (1000 * 60));
+
+                if (gapMins > 0) {
+                  blocks.push({
+                    id: 'gap-' + i,
+                    startDateObj: prev.endDateObj,
+                    endDateObj: current.startDateObj,
+                    durationMins: gapMins,
+                    isGap: true
+                  });
+                }
+              }
+              blocks.push(current);
+            }
+            return blocks;
           }, [steps]);
 
           const formatTime = (date) => {
-            if (isNaN(date.getTime())) return '--:--';
+            if (!date || isNaN(date.getTime())) return '--:--';
             return date.toLocaleTimeString(lang === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
           };
 
           const formatDate = (date) => {
-            if (isNaN(date.getTime())) return '';
+            if (!date || isNaN(date.getTime())) return '';
             return date.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { month: 'short', day: 'numeric' });
           };
 
@@ -145,12 +229,11 @@
             } else {
               setSteps([...steps, { ...formData, id: 'step-' + Date.now() }]);
             }
-
             setIsFormOpen(false);
           };
 
           const handleDeleteStep = (id) => {
-            if (confirm(lang === 'th' ? 'คุณต้องการลบขั้นตอนการทดลองนี้ใช่หรือไม่?' : 'Delete this step?')) {
+            if (confirm(t.confirmDelete)) {
               setSteps(steps.filter(s => s.id !== id));
               setSelectedStepForDetail(null);
             }
@@ -162,10 +245,8 @@
               {/* Header */}
               <div className="flex justify-between items-center bg-cardBg border border-gray-800 p-4 rounded-2xl shadow-xl">
                 <div>
-                  <h1 className="font-bold text-lg text-white flex items-center gap-2">
-                    <span>🔬</span> Lab Visual Timeline
-                  </h1>
-                  <p className="text-xs text-blue-400">วางแผนเวลาแล็บแบบเน้นไอคอน & กำหนดเวลาอิสระ</p>
+                  <h1 className="font-bold text-lg text-white">{t.title}</h1>
+                  <p className="text-xs text-blue-400">{t.subTitle}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -178,64 +259,103 @@
                     onClick={() => handleOpenForm(null)}
                     className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg"
                   >
-                    + เพิ่มขั้นตอน
+                    {t.addBtn}
                   </button>
                 </div>
               </div>
 
-              {/* Visual Icon Timeline Bar */}
+              {/* Proportional Scale Timeline */}
               <div className="bg-cardBg border border-gray-800 rounded-2xl p-4 sm:p-6 shadow-xl">
                 <h2 className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-wider">
-                  📍 Timeline Flow (กดที่ไอคอนเพื่อดูรายละเอียด)
+                  {t.timelineHeader}
                 </h2>
 
-                <div className="relative border-l-2 border-dashed border-blue-500/40 ml-6 pl-8 space-y-8">
-                  {sortedTimeline.map((step) => {
-                    const isIncubate = step.type === 'incubate';
+                <div className="relative border-l-2 border-blue-500/40 ml-8 pl-6 space-y-3">
+                  {timelineBlocks.map((block) => {
+                    // Height calculation: 1 hour = 50px (Minimum 65px for readability)
+                    const calculatedHeight = Math.max(65, Math.floor((block.durationMins / 60) * 50));
+
+                    if (block.isGap) {
+                      // Free Time Gap Block
+                      const gapHours = Math.floor(block.durationMins / 60);
+                      const gapMins = block.durationMins % 60;
+
+                      return (
+                        <div
+                          key={block.id}
+                          style={{ minHeight: `${calculatedHeight}px` }}
+                          className="relative border border-dashed border-emerald-500/30 bg-emerald-950/10 rounded-2xl p-3 flex flex-col justify-center my-2"
+                        >
+                          <div className="absolute -left-[37px] w-5 h-5 rounded-full bg-emerald-900 border-2 border-emerald-400 flex items-center justify-center text-[10px]">
+                            🌱
+                          </div>
+                          <div className="flex justify-between items-center text-xs text-emerald-400 font-medium">
+                            <span>{t.freeTime}</span>
+                            <span className="font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                              {gapHours > 0 && `${gapHours} ${t.hrs} `}{gapMins} {t.mins}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-gray-500 font-mono mt-1">
+                            {formatTime(block.startDateObj)} ➔ {formatTime(block.endDateObj)}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    // Regular Task Block
+                    const isIncubate = block.type === 'incubate';
 
                     return (
-                      <div key={step.id} className="relative group">
-                        
-                        {/* Interactive Clickable Icon Node */}
+                      <div
+                        key={block.id}
+                        style={{ minHeight: `${calculatedHeight}px` }}
+                        className="relative group transition-all"
+                      >
+                        {/* Interactive Clickable Icon Button */}
                         <button
-                          onClick={() => setSelectedStepForDetail(step)}
-                          className={`absolute -left-[57px] -top-1 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border-2 transition-all transform hover:scale-110 active:scale-95 shadow-xl ${
+                          onClick={() => setSelectedStepForDetail(block)}
+                          className={`absolute -left-[57px] top-2 w-13 h-13 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border-2 transition transform hover:scale-110 active:scale-95 shadow-xl ${
                             isIncubate 
-                              ? 'bg-purple-950/90 border-purple-400 text-purple-200 shadow-purple-900/40' 
-                              : 'bg-blue-950/90 border-blue-400 text-blue-200 shadow-blue-900/40'
+                              ? 'bg-purple-950/90 border-purple-400 text-purple-200' 
+                              : 'bg-blue-950/90 border-blue-400 text-blue-200'
                           }`}
                         >
-                          {step.icon || '🧫'}
+                          {block.icon || '🧫'}
                         </button>
 
-                        {/* Minimalist Visual Card */}
-                        <div 
-                          onClick={() => setSelectedStepForDetail(step)}
-                          className={`p-3.5 rounded-2xl border cursor-pointer transition hover:border-blue-500/80 ${
+                        {/* Proportional Height Card */}
+                        <div
+                          onClick={() => setSelectedStepForDetail(block)}
+                          style={{ minHeight: `${calculatedHeight}px` }}
+                          className={`p-3.5 rounded-2xl border cursor-pointer flex flex-col justify-between transition hover:border-blue-400 ${
                             isIncubate ? 'bg-purple-950/20 border-purple-500/30' : 'bg-gray-900/80 border-gray-800'
                           }`}
                         >
-                          <div className="flex justify-between items-center gap-2">
-                            <span className="font-bold text-sm text-white truncate">{step.title}</span>
-                            <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 font-medium ${
-                              isIncubate ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'
-                            }`}>
-                              {isIncubate ? '⏳ Incubate' : '👨‍🔬 Action'}
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                                isIncubate ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'
+                              }`}>
+                                {isIncubate ? t.incubateType : t.actionType}
+                              </span>
+                              <h3 className="font-bold text-sm text-white mt-1">{block.title}</h3>
+                            </div>
+
+                            <span className="text-[11px] font-mono text-gray-400 bg-gray-800/80 px-2 py-1 rounded-lg shrink-0">
+                              ⏱ {Math.floor(block.durationMins / 60) > 0 && `${Math.floor(block.durationMins / 60)} ${t.hrs} `}{block.durationMins % 60} {t.mins}
                             </span>
                           </div>
 
-                          {/* Time Bar */}
-                          <div className="mt-2 flex items-center justify-between text-xs font-mono">
-                            <span className="text-blue-400 font-semibold">
-                              ▶ {formatTime(step.startDateObj)} <span className="text-[10px] text-gray-500">({formatDate(step.startDateObj)})</span>
+                          {/* Time Axis Markers */}
+                          <div className="mt-3 pt-2 border-t border-gray-800/60 flex items-center justify-between text-xs font-mono">
+                            <span className="text-blue-400 font-bold">
+                              {t.start} {formatTime(block.startDateObj)} <span className="text-[10px] text-gray-500">({formatDate(block.startDateObj)})</span>
                             </span>
-                            <span className="text-gray-500">⟶</span>
-                            <span className="text-emerald-400 font-semibold">
-                              🏁 {formatTime(step.endDateObj)} <span className="text-[10px] text-gray-500">({formatDate(step.endDateObj)})</span>
+                            <span className="text-emerald-400 font-bold">
+                              {t.end} {formatTime(block.endDateObj)} <span className="text-[10px] text-gray-500">({formatDate(block.endDateObj)})</span>
                             </span>
                           </div>
                         </div>
-
                       </div>
                     );
                   })}
@@ -254,7 +374,7 @@
                         <div>
                           <h3 className="font-bold text-base text-white">{selectedStepForDetail.title}</h3>
                           <span className="text-xs text-blue-400">
-                            {selectedStepForDetail.type === 'incubate' ? '⏳ Incubation / Wait' : '👨‍🔬 Hands-on Step'}
+                            {selectedStepForDetail.type === 'incubate' ? t.incubateType : t.actionType}
                           </span>
                         </div>
                       </div>
@@ -263,28 +383,28 @@
 
                     <div className="bg-gray-900 p-3.5 rounded-xl border border-gray-800 space-y-2 text-xs">
                       <div className="flex justify-between">
-                        <span className="text-gray-400">เวลาเริ่มต้น (Start Time):</span>
+                        <span className="text-gray-400">{t.start}</span>
                         <span className="font-mono text-blue-400 font-bold">
                           {formatTime(selectedStepForDetail.startDateObj)} ({formatDate(selectedStepForDetail.startDateObj)})
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">เวลาเสร็จ (End Time):</span>
+                        <span className="text-gray-400">{t.end}</span>
                         <span className="font-mono text-emerald-400 font-bold">
                           {formatTime(selectedStepForDetail.endDateObj)} ({formatDate(selectedStepForDetail.endDateObj)})
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-400">ระยะเวลา (Duration):</span>
-                        <span className="text-gray-200">
-                          {selectedStepForDetail.hours} ชม. {selectedStepForDetail.minutes} นาที
+                        <span className="text-gray-400">{t.duration}</span>
+                        <span className="text-gray-200 font-bold">
+                          {selectedStepForDetail.hours} {t.hrs} {selectedStepForDetail.minutes} {t.mins}
                         </span>
                       </div>
                     </div>
 
                     {selectedStepForDetail.notes && (
                       <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-800 text-xs text-gray-300">
-                        <span className="text-gray-400 font-bold block mb-1">📝 โน้ตรายละเอียด / สารเคมี:</span>
+                        <span className="text-gray-400 font-bold block mb-1">{t.notesLabel}</span>
                         {selectedStepForDetail.notes}
                       </div>
                     )}
@@ -294,7 +414,7 @@
                         onClick={() => handleDeleteStep(selectedStepForDetail.id)}
                         className="px-3 py-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs rounded-xl"
                       >
-                        🗑️ ลบขั้นตอน
+                        {t.deleteBtn}
                       </button>
                       <button
                         onClick={() => {
@@ -304,7 +424,7 @@
                         }}
                         className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium rounded-xl"
                       >
-                        ✏️ แก้ไขข้อมูล
+                        {t.editBtn}
                       </button>
                     </div>
                   </div>
@@ -316,12 +436,12 @@
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                   <div className="bg-cardBg border border-gray-800 rounded-2xl p-5 w-full max-w-md space-y-4">
                     <h3 className="text-base font-bold text-white">
-                      {editingStep ? '✏️ แก้ไขขั้นตอนการทดลอง' : '➕ เพิ่มขั้นตอนการทดลอง'}
+                      {editingStep ? t.formEditTitle : t.formAddTitle}
                     </h3>
 
                     <form onSubmit={handleSaveStep} className="space-y-3">
                       <div>
-                        <label className="block text-xs text-gray-300 mb-1">ชื่อขั้นตอน *</label>
+                        <label className="block text-xs text-gray-300 mb-1">{t.taskTitleLabel}</label>
                         <input
                           type="text"
                           required
@@ -331,9 +451,8 @@
                         />
                       </div>
 
-                      {/* Icon Picker */}
                       <div>
-                        <label className="block text-xs text-gray-300 mb-1">เลือกไอคอนสัญลักษณ์</label>
+                        <label className="block text-xs text-gray-300 mb-1">{t.iconLabel}</label>
                         <div className="flex gap-2 overflow-x-auto pb-1">
                           {ICONS.map(ico => (
                             <button
@@ -352,19 +471,19 @@
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-300 mb-1">ประเภทงาน</label>
+                          <label className="block text-xs text-gray-300 mb-1">{t.typeLabel}</label>
                           <select
                             value={formData.type}
                             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                             className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2 text-sm text-white"
                           >
-                            <option value="action">👨‍🔬 Action (ลงมือทำ)</option>
-                            <option value="incubate">⏳ Incubate (เวลาบ่ม/รอ)</option>
+                            <option value="action">{t.actionType}</option>
+                            <option value="incubate">{t.incubateType}</option>
                           </select>
                         </div>
 
                         <div>
-                          <label className="block text-xs text-gray-300 mb-1">เวลาเริ่ม (Start Time) *</label>
+                          <label className="block text-xs text-gray-300 mb-1">{t.startTimeLabel}</label>
                           <input
                             type="datetime-local"
                             required
@@ -377,7 +496,7 @@
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-300 mb-1">ชั่วโมง</label>
+                          <label className="block text-xs text-gray-300 mb-1">{t.hrs}</label>
                           <input
                             type="number"
                             min="0"
@@ -387,7 +506,7 @@
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-300 mb-1">นาที</label>
+                          <label className="block text-xs text-gray-300 mb-1">{t.mins}</label>
                           <input
                             type="number"
                             min="0"
@@ -400,7 +519,7 @@
                       </div>
 
                       <div>
-                        <label className="block text-xs text-gray-300 mb-1">บันทึกเพิ่มเติม / สารเคมี / ข้อควรระวัง</label>
+                        <label className="block text-xs text-gray-300 mb-1">{t.notesFormLabel}</label>
                         <textarea
                           rows={2}
                           value={formData.notes}
@@ -410,8 +529,8 @@
                       </div>
 
                       <div className="flex justify-end gap-2 pt-2 border-t border-gray-800">
-                        <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 bg-gray-800 text-xs text-gray-300 rounded-xl">ยกเลิก</button>
-                        <button type="submit" className="px-4 py-2 bg-blue-600 text-xs text-white rounded-xl font-medium">บันทึก</button>
+                        <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 bg-gray-800 text-xs text-gray-300 rounded-xl">{t.cancel}</button>
+                        <button type="submit" className="px-4 py-2 bg-blue-600 text-xs text-white rounded-xl font-medium">{t.save}</button>
                       </div>
                     </form>
                   </div>
