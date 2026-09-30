@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lab Proportional Visual Timeline</title>
+    <title>Lab Multi-Column Gantt Timeline</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -23,6 +23,9 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         body { background-color: #090d16; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+        ::-webkit-scrollbar { height: 6px; width: 6px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
     </style>
 </head>
 <body class="min-h-screen pb-16">
@@ -35,27 +38,26 @@
 
         const TRANSLATIONS = {
           th: {
-            title: "🔬 Lab Proportional Timeline",
-            subTitle: "แสดงความยาวตามเวลาจริง + สเกลชั่วโมง + ช่องเวลาว่าง",
+            title: "🔬 Lab Multi-Column Timeline",
+            subTitle: "แยกคอลัมน์อัตโนมัติเมื่อมีงานทำซ้อนเวลากัน (Parallel Tasks)",
             addBtn: "+ เพิ่มขั้นตอน",
-            timelineHeader: "📍 ไทม์ไลน์สเกลเวลาจริง (คลิกที่ไอคอนเพื่อดูรายละเอียด)",
-            actionType: "👨‍🔬 งานลงมือทำ (Action)",
-            incubateType: "⏳ เวลาบ่ม/รอ (Incubation)",
+            actionType: "👨‍🔬 Action",
+            incubateType: "⏳ Incubate",
             start: "เริ่ม:",
             end: "เสร็จ:",
             duration: "ระยะเวลา:",
             hrs: "ชม.",
             mins: "นาที",
-            freeTime: "🌱 ช่วงเวลาว่าง (ไม่มีแล็บ)",
-            detailTitle: "รายละเอียดขั้นตอน",
+            freeTime: "🌱 ช่วงเวลาว่าง",
+            colTitle: "คอลัมน์งานที่",
             notesLabel: "📝 โน้ตรายละเอียด / สารเคมี:",
             deleteBtn: "🗑️ ลบขั้นตอน",
             editBtn: "✏️ แก้ไขข้อมูล",
             confirmDelete: "คุณต้องการลบขั้นตอนการทดลองนี้ใช่หรือไม่?",
             formAddTitle: "➕ เพิ่มขั้นตอนการทดลอง",
-            formEditTitle: "✏️ แก้ไขขั้นตอนการทดลอง",
+            formEditTitle: "✏️️ แก้ไขขั้นตอนการทดลอง",
             taskTitleLabel: "ชื่อขั้นตอน *",
-            iconLabel: "เลือกไอคอนสัญลักษณ์",
+            iconLabel: "เลือกไอคอน",
             typeLabel: "ประเภทงาน",
             startTimeLabel: "เวลาเริ่ม (Start Time) *",
             notesFormLabel: "บันทึกเพิ่มเติม / สารเคมี / ข้อควรระวัง",
@@ -63,19 +65,18 @@
             save: "บันทึก"
           },
           en: {
-            title: "🔬 Lab Proportional Timeline",
-            subTitle: "Real-time Scale + Hour Markers + Free Time Display",
+            title: "🔬 Lab Multi-Column Timeline",
+            subTitle: "Auto multi-column split for parallel / overlapping tasks",
             addBtn: "+ Add Step",
-            timelineHeader: "📍 Proportional Scale Timeline (Click icon for details)",
-            actionType: "👨‍🔬 Action Step",
-            incubateType: "⏳ Incubation / Wait",
+            actionType: "👨‍🔬 Action",
+            incubateType: "⏳ Incubate",
             start: "Start:",
             end: "End:",
             duration: "Duration:",
             hrs: "hrs",
             mins: "mins",
-            freeTime: "🌱 Free Time (No Lab)",
-            detailTitle: "Step Details",
+            freeTime: "🌱 Free Time",
+            colTitle: "Task Column",
             notesLabel: "📝 Details / Reagents Notes:",
             deleteBtn: "🗑️ Delete Step",
             editBtn: "✏️ Edit Step",
@@ -95,33 +96,33 @@
         const DEFAULT_STEPS = [
           {
             id: 'step-1',
-            title: 'Seed Cells (เลี้ยงเซลล์ลง Plate)',
+            title: 'Seed Cells (Plate A)',
             icon: '🧫',
             type: 'action',
             startTime: new Date(new Date().setHours(10, 0, 0, 0)).toISOString().slice(0, 16),
             hours: 2,
             minutes: 0,
-            notes: 'ใช้ 6-well plate, Density 1x10^5 cells/well'
+            notes: 'ใช้ 6-well plate A'
           },
           {
             id: 'step-2',
-            title: 'Incubation (บ่มเซลล์ 16 ชม.)',
+            title: 'Incubation (Incubator #1)',
             icon: '⏳',
             type: 'incubate',
             startTime: new Date(new Date().setHours(12, 0, 0, 0)).toISOString().slice(0, 16),
             hours: 16,
             minutes: 0,
-            notes: 'ตู้ CO2 Incubator 37°C, 5% CO2'
+            notes: 'บ่มเซลล์ Plate A 16 ชั่วโมง'
           },
           {
             id: 'step-3',
-            title: 'Drug Treatment (เริ่มใส่สารทดลอง)',
-            icon: '💉',
+            title: 'Prepare Buffer & Reagent B (งานซ้อน)',
+            icon: '🧪',
             type: 'action',
-            startTime: new Date(new Date(Date.now() + 86400000).setHours(8, 0, 0, 0)).toISOString().slice(0, 16),
-            hours: 1,
-            minutes: 30,
-            notes: 'ใส่สารกลุ่ม Sample A ความเข้มข้น 10 uM'
+            startTime: new Date(new Date().setHours(14, 0, 0, 0)).toISOString().slice(0, 16),
+            hours: 3,
+            minutes: 0,
+            notes: 'เตรียมน้ำยาซ้อนระหว่างรอ Incubate Plate A'
           }
         ];
 
@@ -130,7 +131,7 @@
           const t = TRANSLATIONS[lang];
 
           const [steps, setSteps] = useState(() => {
-            const saved = localStorage.getItem('lab_proportional_timeline_v2');
+            const saved = localStorage.getItem('lab_multicolumn_timeline_v3');
             return saved ? JSON.parse(saved) : DEFAULT_STEPS;
           });
 
@@ -149,12 +150,12 @@
           });
 
           useEffect(() => {
-            localStorage.setItem('lab_proportional_timeline_v2', JSON.stringify(steps));
+            localStorage.setItem('lab_multicolumn_timeline_v3', JSON.stringify(steps));
           }, [steps]);
 
-          // Process timeline and build gaps (Free Time)
-          const timelineBlocks = useMemo(() => {
-            const processed = steps.map(step => {
+          // Multi-Column Overlap Algorithm
+          const { columns, minStartTime, maxEndTime } = useMemo(() => {
+            const sorted = steps.map(step => {
               const start = new Date(step.startTime);
               const durationMins = (parseInt(step.hours || 0) * 60) + parseInt(step.minutes || 0);
               const end = new Date(start.getTime() + durationMins * 60 * 1000);
@@ -162,33 +163,34 @@
                 ...step,
                 startDateObj: start,
                 endDateObj: end,
-                durationMins,
-                isGap: false
+                durationMins
               };
             }).sort((a, b) => a.startDateObj - b.startDateObj);
 
-            // Inject Free Time Gaps
-            const blocks = [];
-            for (let i = 0; i < processed.length; i++) {
-              const current = processed[i];
-              if (i > 0) {
-                const prev = processed[i - 1];
-                const gapMs = current.startDateObj - prev.endDateObj;
-                const gapMins = Math.floor(gapMs / (1000 * 60));
+            if (sorted.length === 0) return { columns: [], minStartTime: new Date(), maxEndTime: new Date() };
 
-                if (gapMins > 0) {
-                  blocks.push({
-                    id: 'gap-' + i,
-                    startDateObj: prev.endDateObj,
-                    endDateObj: current.startDateObj,
-                    durationMins: gapMins,
-                    isGap: true
-                  });
+            const cols = [];
+
+            sorted.forEach(task => {
+              let placed = false;
+              for (let col of cols) {
+                const lastTaskInCol = col[col.length - 1];
+                // Check if current task starts after the last task in this column ends
+                if (task.startDateObj >= lastTaskInCol.endDateObj) {
+                  col.push(task);
+                  placed = true;
+                  break;
                 }
               }
-              blocks.push(current);
-            }
-            return blocks;
+              if (!placed) {
+                cols.push([task]); // Create new column if overlap
+              }
+            });
+
+            const overallMin = new Date(Math.min(...sorted.map(s => s.startDateObj)));
+            const overallMax = new Date(Math.max(...sorted.map(s => s.endDateObj)));
+
+            return { columns: cols, minStartTime: overallMin, maxEndTime: overallMax };
           }, [steps]);
 
           const formatTime = (date) => {
@@ -240,7 +242,7 @@
           };
 
           return (
-            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+            <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
               
               {/* Header */}
               <div className="flex justify-between items-center bg-cardBg border border-gray-800 p-4 rounded-2xl shadow-xl">
@@ -264,105 +266,73 @@
                 </div>
               </div>
 
-              {/* Proportional Scale Timeline */}
-              <div className="bg-cardBg border border-gray-800 rounded-2xl p-4 sm:p-6 shadow-xl">
-                <h2 className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-wider">
-                  {t.timelineHeader}
-                </h2>
-
-                <div className="relative border-l-2 border-blue-500/40 ml-8 pl-6 space-y-3">
-                  {timelineBlocks.map((block) => {
-                    // Height calculation: 1 hour = 50px (Minimum 65px for readability)
-                    const calculatedHeight = Math.max(65, Math.floor((block.durationMins / 60) * 50));
-
-                    if (block.isGap) {
-                      // Free Time Gap Block
-                      const gapHours = Math.floor(block.durationMins / 60);
-                      const gapMins = block.durationMins % 60;
-
-                      return (
-                        <div
-                          key={block.id}
-                          style={{ minHeight: `${calculatedHeight}px` }}
-                          className="relative border border-dashed border-emerald-500/30 bg-emerald-950/10 rounded-2xl p-3 flex flex-col justify-center my-2"
-                        >
-                          <div className="absolute -left-[37px] w-5 h-5 rounded-full bg-emerald-900 border-2 border-emerald-400 flex items-center justify-center text-[10px]">
-                            🌱
-                          </div>
-                          <div className="flex justify-between items-center text-xs text-emerald-400 font-medium">
-                            <span>{t.freeTime}</span>
-                            <span className="font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                              {gapHours > 0 && `${gapHours} ${t.hrs} `}{gapMins} {t.mins}
-                            </span>
-                          </div>
-                          <div className="text-[10px] text-gray-500 font-mono mt-1">
-                            {formatTime(block.startDateObj)} ➔ {formatTime(block.endDateObj)}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    // Regular Task Block
-                    const isIncubate = block.type === 'incubate';
-
-                    return (
-                      <div
-                        key={block.id}
-                        style={{ minHeight: `${calculatedHeight}px` }}
-                        className="relative group transition-all"
-                      >
-                        {/* Interactive Clickable Icon Button */}
-                        <button
-                          onClick={() => setSelectedStepForDetail(block)}
-                          className={`absolute -left-[57px] top-2 w-13 h-13 w-12 h-12 rounded-2xl flex items-center justify-center text-2xl border-2 transition transform hover:scale-110 active:scale-95 shadow-xl ${
-                            isIncubate 
-                              ? 'bg-purple-950/90 border-purple-400 text-purple-200' 
-                              : 'bg-blue-950/90 border-blue-400 text-blue-200'
-                          }`}
-                        >
-                          {block.icon || '🧫'}
-                        </button>
-
-                        {/* Proportional Height Card */}
-                        <div
-                          onClick={() => setSelectedStepForDetail(block)}
-                          style={{ minHeight: `${calculatedHeight}px` }}
-                          className={`p-3.5 rounded-2xl border cursor-pointer flex flex-col justify-between transition hover:border-blue-400 ${
-                            isIncubate ? 'bg-purple-950/20 border-purple-500/30' : 'bg-gray-900/80 border-gray-800'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start gap-2">
-                            <div>
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                                isIncubate ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'
-                              }`}>
-                                {isIncubate ? t.incubateType : t.actionType}
-                              </span>
-                              <h3 className="font-bold text-sm text-white mt-1">{block.title}</h3>
-                            </div>
-
-                            <span className="text-[11px] font-mono text-gray-400 bg-gray-800/80 px-2 py-1 rounded-lg shrink-0">
-                              ⏱ {Math.floor(block.durationMins / 60) > 0 && `${Math.floor(block.durationMins / 60)} ${t.hrs} `}{block.durationMins % 60} {t.mins}
-                            </span>
-                          </div>
-
-                          {/* Time Axis Markers */}
-                          <div className="mt-3 pt-2 border-t border-gray-800/60 flex items-center justify-between text-xs font-mono">
-                            <span className="text-blue-400 font-bold">
-                              {t.start} {formatTime(block.startDateObj)} <span className="text-[10px] text-gray-500">({formatDate(block.startDateObj)})</span>
-                            </span>
-                            <span className="text-emerald-400 font-bold">
-                              {t.end} {formatTime(block.endDateObj)} <span className="text-[10px] text-gray-500">({formatDate(block.endDateObj)})</span>
-                            </span>
-                          </div>
-                        </div>
+              {/* Multi-Column Timeline Canvas */}
+              <div className="bg-cardBg border border-gray-800 rounded-2xl p-4 sm:p-6 shadow-xl overflow-x-auto">
+                <div className="min-w-[600px]">
+                  
+                  {/* Columns Header */}
+                  <div className="grid gap-4 mb-4" style={{ gridTemplateColumns: `repeat(${columns.length || 1}, minmax(260px, 1fr))` }}>
+                    {columns.map((_, idx) => (
+                      <div key={idx} className="bg-gray-900 border border-gray-800 px-3 py-2 rounded-xl text-xs font-bold text-blue-400 flex items-center justify-between">
+                        <span>{t.colTitle} {idx + 1}</span>
+                        <span className="text-[10px] text-gray-500">Column #{idx + 1}</span>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+
+                  {/* Multi-Column Gantt Grid */}
+                  <div className="grid gap-4 items-start" style={{ gridTemplateColumns: `repeat(${columns.length || 1}, minmax(260px, 1fr))` }}>
+                    {columns.map((colTasks, colIdx) => (
+                      <div key={colIdx} className="space-y-4 border-l border-dashed border-gray-800 pl-3">
+                        {colTasks.map((step) => {
+                          const isIncubate = step.type === 'incubate';
+                          const calculatedHeight = Math.max(80, Math.floor((step.durationMins / 60) * 40));
+
+                          return (
+                            <div
+                              key={step.id}
+                              onClick={() => setSelectedStepForDetail(step)}
+                              style={{ minHeight: `${calculatedHeight}px` }}
+                              className={`p-3.5 rounded-2xl border cursor-pointer transition hover:border-blue-400 flex flex-col justify-between shadow-lg ${
+                                isIncubate ? 'bg-purple-950/30 border-purple-500/40' : 'bg-gray-900/90 border-gray-800'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-2xl p-1.5 rounded-xl bg-gray-800/80 border border-gray-700/60 shrink-0">
+                                    {step.icon || '🧫'}
+                                  </span>
+                                  <div>
+                                    <h3 className="font-bold text-xs sm:text-sm text-white line-clamp-2">{step.title}</h3>
+                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                                      isIncubate ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'
+                                    }`}>
+                                      {isIncubate ? t.incubateType : t.actionType}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-3 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[11px] font-mono">
+                                <span className="text-blue-400 font-bold">
+                                  {formatTime(step.startDateObj)}
+                                </span>
+                                <span className="text-gray-500">➔</span>
+                                <span className="text-emerald-400 font-bold">
+                                  {formatTime(step.endDateObj)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+
                 </div>
               </div>
 
-              {/* Detail Pop-up Modal */}
+              {/* Detail Modal */}
               {selectedStepForDetail && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                   <div className="bg-cardBg border border-gray-800 rounded-2xl p-5 w-full max-w-md space-y-4 shadow-2xl">
