@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lab Workflow & Timeline Planner</title>
+    <title>Lab Interactive Visual Timeline</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -11,7 +11,7 @@
             theme: {
                 extend: {
                     colors: {
-                        darkBg: '#0b0f17',
+                        darkBg: '#090d16',
                         cardBg: '#111827',
                         accentBlue: '#3b82f6',
                         accentPurple: '#8b5cf6',
@@ -24,244 +24,304 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { background-color: #0b0f17; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: #090d16; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen pb-16">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useMemo } = React;
+        const { useState, useEffect, useMemo } = React;
 
-        const TRANSLATIONS = {
-          th: {
-            title: "🧪 Lab Timeline Planner",
-            subTitle: "ระบบวางแผนไทม์ไลน์การทดลองและเลี้ยงเซลล์",
-            startTime: "เวลาเริ่มต้นการทดลอง:",
-            addTask: "+ เพิ่มขั้นตอนแล็บ",
-            typeAction: "👨‍🔬 งานที่ต้องทำ (Hands-on)",
-            typeIncubate: "⏳ เวลาบ่ม/รอ (Incubation/Wait)",
-            step: "ขั้นตอนที่",
-            duration: "ระยะเวลา:",
-            startAt: "เริ่ม:",
-            endAt: "เสร็จ/พร้อมทำต่อ:",
-            hrs: "ชม.",
-            mins: "นาที",
-            overnightNote: "🌙 ข้ามไปวันถัดไป",
-            taskTitle: "ชื่อขั้นตอนการทดลอง",
-            taskType: "ประเภทงาน",
-            notes: "บันทึกเพิ่มเติม / โน้ตสารเคมี",
-            save: "บันทึก",
-            cancel: "ยกเลิก",
-            delete: "ลบ",
-            presetBtn: "🔄 โหลดตัวอย่างการเลี้ยงเซลล์ (16 ชม.)"
-          },
-          en: {
-            title: "🧪 Lab Timeline Planner",
-            subTitle: "Experiment & Cell Culture Timeline Scheduler",
-            startTime: "Experiment Start Time:",
-            addTask: "+ Add Step",
-            typeAction: "👨‍🔬 Hands-on Action",
-            typeIncubate: "⏳ Incubation / Wait",
-            step: "Step",
-            duration: "Duration:",
-            startAt: "Start:",
-            endAt: "End / Next Ready:",
-            hrs: "hrs",
-            mins: "mins",
-            overnightNote: "🌙 Next Day",
-            taskTitle: "Step Title / Protocol",
-            taskType: "Step Type",
-            notes: "Notes / Reagent Details",
-            save: "Save Step",
-            cancel: "Cancel",
-            delete: "Delete",
-            presetBtn: "🔄 Load Cell Culture Template (16h)"
-          }
-        };
+        const ICONS = ['🧫', '🔬', '🧪', '⏳', '💉', '🧊', '🌡️', '🥼', '🧬', '📊'];
 
         const DEFAULT_STEPS = [
-          { id: '1', title: 'Seed Cells (เลี้ยงเซลล์ลง Plate)', hours: 2, minutes: 0, type: 'action', notes: 'ใช้ 6-well plate, Density 1x10^5 cells/well' },
-          { id: '2', title: 'Incubation (บ่มเซลล์ในตู้ CO2)', hours: 16, minutes: 0, type: 'incubate', notes: '37°C, 5% CO2' },
-          { id: '3', title: 'Drug Treatment / Experiment (เริ่มการทดลองถัดไป)', hours: 1, minutes: 30, type: 'action', notes: 'ใส่สารทดลองกลุ่ม A และ B' }
+          {
+            id: 'step-1',
+            title: 'Seed Cells (เลี้ยงเซลล์ลง Plate)',
+            icon: '🧫',
+            type: 'action',
+            startTime: new Date(new Date().setHours(10, 0, 0, 0)).toISOString().slice(0, 16),
+            hours: 2,
+            minutes: 0,
+            notes: 'ใช้ 6-well plate, Density 1x10^5 cells/well เตรียมสื่อเลี้ยงเซลล์ DMEM + 10% FBS'
+          },
+          {
+            id: 'step-2',
+            title: 'Incubation (บ่มเซลล์ 16 ชม.)',
+            icon: '⏳',
+            type: 'incubate',
+            startTime: new Date(new Date().setHours(12, 0, 0, 0)).toISOString().slice(0, 16),
+            hours: 16,
+            minutes: 0,
+            notes: 'ตั้งค่าตู้ CO2 Incubator ที่ 37°C, 5% CO2 ห้ามเปิดตู้นาน'
+          },
+          {
+            id: 'step-3',
+            title: 'Drug Treatment (เริ่มใส่สารทดลอง)',
+            icon: '💉',
+            type: 'action',
+            startTime: new Date(new Date(Date.now() + 86400000).setHours(4, 0, 0, 0)).toISOString().slice(0, 16),
+            hours: 1,
+            minutes: 30,
+            notes: 'ใส่สารกลุ่ม Sample A และ B ละลายใน DMSO ความเข้มข้น 10 uM'
+          }
         ];
 
         function App() {
           const [lang, setLang] = useState('th');
-          const t = TRANSLATIONS[lang];
-
-          // Default start time: Today 10:00 AM
-          const [startTimeStr, setStartTimeStr] = useState(() => {
-            const now = new Date();
-            now.setHours(10, 0, 0, 0);
-            return now.toISOString().slice(0, 16);
+          const [steps, setSteps] = useState(() => {
+            const saved = localStorage.getItem('lab_visual_timeline_v1');
+            return saved ? JSON.parse(saved) : DEFAULT_STEPS;
           });
 
-          const [steps, setSteps] = useState(DEFAULT_STEPS);
-          const [isModalOpen, setIsModalOpen] = useState(false);
-          const [formData, setFormData] = useState({ title: '', hours: 1, minutes: 0, type: 'action', notes: '' });
+          const [selectedStepForDetail, setSelectedStepForDetail] = useState(null);
+          const [isFormOpen, setIsFormOpen] = useState(false);
+          const [editingStep, setEditingStep] = useState(null);
 
-          // Calculate Timeline Schedule
-          const calculatedTimeline = useMemo(() => {
-            let currentCursor = new Date(startTimeStr);
-            if (isNaN(currentCursor.getTime())) currentCursor = new Date();
+          const [formData, setFormData] = useState({
+            title: '',
+            icon: '🧫',
+            type: 'action',
+            startTime: new Date().toISOString().slice(0, 16),
+            hours: 1,
+            minutes: 0,
+            notes: ''
+          });
 
-            return steps.map((step) => {
-              const start = new Date(currentCursor);
+          useEffect(() => {
+            localStorage.setItem('lab_visual_timeline_v1', JSON.stringify(steps));
+          }, [steps]);
+
+          // Process schedule and sort by Start Time
+          const sortedTimeline = useMemo(() => {
+            return steps.map(step => {
+              const start = new Date(step.startTime);
               const durationMs = ((parseInt(step.hours || 0) * 60) + parseInt(step.minutes || 0)) * 60 * 1000;
               const end = new Date(start.getTime() + durationMs);
-
-              // Update cursor for next step
-              currentCursor = new Date(end);
-
-              const isOvernight = start.getDate() !== end.getDate();
-
               return {
                 ...step,
-                startTime: start,
-                endTime: end,
-                isOvernight
+                startDateObj: start,
+                endDateObj: end,
               };
-            });
-          }, [startTimeStr, steps]);
+            }).sort((a, b) => a.startDateObj - b.startDateObj);
+          }, [steps]);
 
           const formatTime = (date) => {
+            if (isNaN(date.getTime())) return '--:--';
             return date.toLocaleTimeString(lang === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
           };
 
           const formatDate = (date) => {
+            if (isNaN(date.getTime())) return '';
             return date.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { month: 'short', day: 'numeric' });
           };
 
-          const handleAddStep = (e) => {
+          const handleOpenForm = (stepToEdit = null) => {
+            if (stepToEdit) {
+              setEditingStep(stepToEdit);
+              setFormData({ ...stepToEdit });
+            } else {
+              setEditingStep(null);
+              setFormData({
+                title: '',
+                icon: '🧫',
+                type: 'action',
+                startTime: new Date().toISOString().slice(0, 16),
+                hours: 1,
+                minutes: 0,
+                notes: ''
+              });
+            }
+            setIsFormOpen(true);
+          };
+
+          const handleSaveStep = (e) => {
             e.preventDefault();
             if (!formData.title.trim()) return;
-            setSteps([...steps, { ...formData, id: Date.now().toString() }]);
-            setIsModalOpen(false);
-            setFormData({ title: '', hours: 1, minutes: 0, type: 'action', notes: '' });
+
+            if (editingStep) {
+              setSteps(steps.map(s => s.id === editingStep.id ? { ...formData, id: editingStep.id } : s));
+            } else {
+              setSteps([...steps, { ...formData, id: 'step-' + Date.now() }]);
+            }
+
+            setIsFormOpen(false);
           };
 
           const handleDeleteStep = (id) => {
-            setSteps(steps.filter(s => s.id !== id));
+            if (confirm(lang === 'th' ? 'คุณต้องการลบขั้นตอนการทดลองนี้ใช่หรือไม่?' : 'Delete this step?')) {
+              setSteps(steps.filter(s => s.id !== id));
+              setSelectedStepForDetail(null);
+            }
           };
 
           return (
             <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+              
               {/* Header */}
-              <div className="flex justify-between items-center bg-cardBg border border-gray-800 p-4 rounded-2xl">
+              <div className="flex justify-between items-center bg-cardBg border border-gray-800 p-4 rounded-2xl shadow-xl">
                 <div>
-                  <h1 className="font-bold text-lg text-white">{t.title}</h1>
-                  <p className="text-xs text-blue-400">{t.subTitle}</p>
+                  <h1 className="font-bold text-lg text-white flex items-center gap-2">
+                    <span>🔬</span> Lab Visual Timeline
+                  </h1>
+                  <p className="text-xs text-blue-400">วางแผนเวลาแล็บแบบเน้นไอคอน & กำหนดเวลาอิสระ</p>
                 </div>
-                <button
-                  onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
-                  className="px-3 py-1 bg-gray-800 text-xs text-gray-300 font-bold rounded-lg border border-gray-700"
-                >
-                  🌐 {lang === 'th' ? 'EN' : 'TH'}
-                </button>
-              </div>
-
-              {/* Start Time Config */}
-              <div className="bg-cardBg border border-gray-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">⏰</span>
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">{t.startTime}</label>
-                    <input
-                      type="datetime-local"
-                      value={startTimeStr}
-                      onChange={(e) => setStartTimeStr(e.target.value)}
-                      className="bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
+                    className="px-2.5 py-1 bg-gray-800 text-xs font-bold text-gray-300 rounded-lg border border-gray-700"
+                  >
+                    🌐 {lang === 'th' ? 'EN' : 'TH'}
+                  </button>
+                  <button
+                    onClick={() => handleOpenForm(null)}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg"
+                  >
+                    + เพิ่มขั้นตอน
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => setSteps(DEFAULT_STEPS)}
-                  className="text-xs text-gray-400 hover:text-blue-400 underline"
-                >
-                  {t.presetBtn}
-                </button>
               </div>
 
-              {/* Action Bar */}
-              <div className="flex justify-between items-center">
-                <h2 className="text-sm font-bold text-gray-300">Lab Pipeline Steps ({steps.length})</h2>
-                <button
-                  onClick={() => setIsModalOpen(true)}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg transition"
-                >
-                  {t.addTask}
-                </button>
-              </div>
+              {/* Visual Icon Timeline Bar */}
+              <div className="bg-cardBg border border-gray-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+                <h2 className="text-xs font-bold text-gray-400 mb-6 uppercase tracking-wider">
+                  📍 Timeline Flow (กดที่ไอคอนเพื่อดูรายละเอียด)
+                </h2>
 
-              {/* Timeline Display */}
-              <div className="relative border-l-2 border-blue-500/30 ml-4 pl-6 space-y-6">
-                {calculatedTimeline.map((step, index) => (
-                  <div key={step.id} className="relative group">
-                    {/* Timeline Dot */}
-                    <div className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 ${
-                      step.type === 'incubate' ? 'bg-purple-500 border-purple-300 shadow-[0_0_10px_rgba(139,92,246,0.5)]' : 'bg-blue-500 border-blue-300'
-                    }`} />
+                <div className="relative border-l-2 border-dashed border-blue-500/40 ml-6 pl-8 space-y-8">
+                  {sortedTimeline.map((step) => {
+                    const isIncubate = step.type === 'incubate';
 
-                    <div className={`p-4 rounded-2xl border ${
-                      step.type === 'incubate' ? 'bg-purple-950/20 border-purple-500/30' : 'bg-cardBg border-gray-800'
-                    }`}>
-                      <div className="flex justify-between items-start gap-2 mb-2">
-                        <div>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            step.type === 'incubate' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
-                          }`}>
-                            {step.type === 'incubate' ? t.typeIncubate : t.typeAction}
-                          </span>
-                          <h3 className="text-base font-bold text-white mt-1">
-                            {t.step} {index + 1}: {step.title}
-                          </h3>
-                        </div>
-                        <button onClick={() => handleDeleteStep(step.id)} className="text-xs text-gray-500 hover:text-rose-400">
-                          {t.delete}
+                    return (
+                      <div key={step.id} className="relative group">
+                        
+                        {/* Interactive Clickable Icon Node */}
+                        <button
+                          onClick={() => setSelectedStepForDetail(step)}
+                          className={`absolute -left-[57px] -top-1 w-14 h-14 rounded-2xl flex items-center justify-center text-2xl border-2 transition-all transform hover:scale-110 active:scale-95 shadow-xl ${
+                            isIncubate 
+                              ? 'bg-purple-950/90 border-purple-400 text-purple-200 shadow-purple-900/40' 
+                              : 'bg-blue-950/90 border-blue-400 text-blue-200 shadow-blue-900/40'
+                          }`}
+                        >
+                          {step.icon || '🧫'}
                         </button>
-                      </div>
 
-                      {/* Time Schedule Highlight */}
-                      <div className="grid grid-cols-2 gap-2 my-3 p-2.5 bg-gray-900/60 rounded-xl border border-gray-800/80 text-xs">
-                        <div>
-                          <span className="text-gray-400 block">{t.startAt}</span>
-                          <span className="font-mono font-bold text-blue-400 text-sm">
-                            {formatTime(step.startTime)} <span className="text-[10px] text-gray-500">({formatDate(step.startTime)})</span>
-                          </span>
+                        {/* Minimalist Visual Card */}
+                        <div 
+                          onClick={() => setSelectedStepForDetail(step)}
+                          className={`p-3.5 rounded-2xl border cursor-pointer transition hover:border-blue-500/80 ${
+                            isIncubate ? 'bg-purple-950/20 border-purple-500/30' : 'bg-gray-900/80 border-gray-800'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="font-bold text-sm text-white truncate">{step.title}</span>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 font-medium ${
+                              isIncubate ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'
+                            }`}>
+                              {isIncubate ? '⏳ Incubate' : '👨‍🔬 Action'}
+                            </span>
+                          </div>
+
+                          {/* Time Bar */}
+                          <div className="mt-2 flex items-center justify-between text-xs font-mono">
+                            <span className="text-blue-400 font-semibold">
+                              ▶ {formatTime(step.startDateObj)} <span className="text-[10px] text-gray-500">({formatDate(step.startDateObj)})</span>
+                            </span>
+                            <span className="text-gray-500">⟶</span>
+                            <span className="text-emerald-400 font-semibold">
+                              🏁 {formatTime(step.endDateObj)} <span className="text-[10px] text-gray-500">({formatDate(step.endDateObj)})</span>
+                            </span>
+                          </div>
+                        </div>
+
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Detail Pop-up Modal */}
+              {selectedStepForDetail && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  <div className="bg-cardBg border border-gray-800 rounded-2xl p-5 w-full max-w-md space-y-4 shadow-2xl">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-2xl">
+                          {selectedStepForDetail.icon}
                         </div>
                         <div>
-                          <span className="text-gray-400 block">{t.endAt}</span>
-                          <span className="font-mono font-bold text-emerald-400 text-sm">
-                            {formatTime(step.endTime)} <span className="text-[10px] text-gray-500">({formatDate(step.endTime)})</span>
+                          <h3 className="font-bold text-base text-white">{selectedStepForDetail.title}</h3>
+                          <span className="text-xs text-blue-400">
+                            {selectedStepForDetail.type === 'incubate' ? '⏳ Incubation / Wait' : '👨‍🔬 Hands-on Step'}
                           </span>
                         </div>
                       </div>
+                      <button onClick={() => setSelectedStepForDetail(null)} className="text-gray-400 hover:text-white">✕</button>
+                    </div>
 
-                      <div className="flex items-center justify-between text-xs text-gray-400">
-                        <span>⏳ {t.duration} {step.hours > 0 && `${step.hours} ${t.hrs} `}{step.minutes} {t.mins}</span>
-                        {step.isOvernight && <span className="text-amber-400 font-medium">{t.overnightNote}</span>}
+                    <div className="bg-gray-900 p-3.5 rounded-xl border border-gray-800 space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">เวลาเริ่มต้น (Start Time):</span>
+                        <span className="font-mono text-blue-400 font-bold">
+                          {formatTime(selectedStepForDetail.startDateObj)} ({formatDate(selectedStepForDetail.startDateObj)})
+                        </span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">เวลาเสร็จ (End Time):</span>
+                        <span className="font-mono text-emerald-400 font-bold">
+                          {formatTime(selectedStepForDetail.endDateObj)} ({formatDate(selectedStepForDetail.endDateObj)})
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">ระยะเวลา (Duration):</span>
+                        <span className="text-gray-200">
+                          {selectedStepForDetail.hours} ชม. {selectedStepForDetail.minutes} นาที
+                        </span>
+                      </div>
+                    </div>
 
-                      {step.notes && (
-                        <div className="mt-2 pt-2 border-t border-gray-800/60 text-xs text-gray-400 italic">
-                          📝 {step.notes}
-                        </div>
-                      )}
+                    {selectedStepForDetail.notes && (
+                      <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-800 text-xs text-gray-300">
+                        <span className="text-gray-400 font-bold block mb-1">📝 โน้ตรายละเอียด / สารเคมี:</span>
+                        {selectedStepForDetail.notes}
+                      </div>
+                    )}
+
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-800">
+                      <button
+                        onClick={() => handleDeleteStep(selectedStepForDetail.id)}
+                        className="px-3 py-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs rounded-xl"
+                      >
+                        🗑️ ลบขั้นตอน
+                      </button>
+                      <button
+                        onClick={() => {
+                          const target = selectedStepForDetail;
+                          setSelectedStepForDetail(null);
+                          handleOpenForm(target);
+                        }}
+                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium rounded-xl"
+                      >
+                        ✏️ แก้ไขข้อมูล
+                      </button>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
 
-              {/* Add Step Modal */}
-              {isModalOpen && (
+              {/* Add / Edit Form Modal */}
+              {isFormOpen && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                   <div className="bg-cardBg border border-gray-800 rounded-2xl p-5 w-full max-w-md space-y-4">
-                    <h3 className="text-base font-bold text-white">{t.addTask}</h3>
-                    <form onSubmit={handleAddStep} className="space-y-3">
+                    <h3 className="text-base font-bold text-white">
+                      {editingStep ? '✏️ แก้ไขขั้นตอนการทดลอง' : '➕ เพิ่มขั้นตอนการทดลอง'}
+                    </h3>
+
+                    <form onSubmit={handleSaveStep} className="space-y-3">
                       <div>
-                        <label className="block text-xs text-gray-300 mb-1">{t.taskTitle}</label>
+                        <label className="block text-xs text-gray-300 mb-1">ชื่อขั้นตอน *</label>
                         <input
                           type="text"
                           required
@@ -271,21 +331,53 @@
                         />
                       </div>
 
+                      {/* Icon Picker */}
                       <div>
-                        <label className="block text-xs text-gray-300 mb-1">{t.taskType}</label>
-                        <select
-                          value={formData.type}
-                          onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                          className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2.5 text-sm text-white"
-                        >
-                          <option value="action">{t.typeAction}</option>
-                          <option value="incubate">{t.typeIncubate}</option>
-                        </select>
+                        <label className="block text-xs text-gray-300 mb-1">เลือกไอคอนสัญลักษณ์</label>
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {ICONS.map(ico => (
+                            <button
+                              key={ico}
+                              type="button"
+                              onClick={() => setFormData({ ...formData, icon: ico })}
+                              className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border shrink-0 ${
+                                formData.icon === ico ? 'bg-blue-600 border-blue-400' : 'bg-gray-900 border-gray-800'
+                              }`}
+                            >
+                              {ico}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-300 mb-1">{t.hrs}</label>
+                          <label className="block text-xs text-gray-300 mb-1">ประเภทงาน</label>
+                          <select
+                            value={formData.type}
+                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2 text-sm text-white"
+                          >
+                            <option value="action">👨‍🔬 Action (ลงมือทำ)</option>
+                            <option value="incubate">⏳ Incubate (เวลาบ่ม/รอ)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs text-gray-300 mb-1">เวลาเริ่ม (Start Time) *</label>
+                          <input
+                            type="datetime-local"
+                            required
+                            value={formData.startTime}
+                            onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2 text-xs text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-300 mb-1">ชั่วโมง</label>
                           <input
                             type="number"
                             min="0"
@@ -295,7 +387,7 @@
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-300 mb-1">{t.mins}</label>
+                          <label className="block text-xs text-gray-300 mb-1">นาที</label>
                           <input
                             type="number"
                             min="0"
@@ -308,7 +400,7 @@
                       </div>
 
                       <div>
-                        <label className="block text-xs text-gray-300 mb-1">{t.notes}</label>
+                        <label className="block text-xs text-gray-300 mb-1">บันทึกเพิ่มเติม / สารเคมี / ข้อควรระวัง</label>
                         <textarea
                           rows={2}
                           value={formData.notes}
@@ -317,14 +409,15 @@
                         />
                       </div>
 
-                      <div className="flex justify-end gap-2 pt-2">
-                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-gray-800 text-xs text-gray-300 rounded-xl">{t.cancel}</button>
-                        <button type="submit" className="px-4 py-2 bg-blue-600 text-xs text-white rounded-xl font-medium">{t.save}</button>
+                      <div className="flex justify-end gap-2 pt-2 border-t border-gray-800">
+                        <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 bg-gray-800 text-xs text-gray-300 rounded-xl">ยกเลิก</button>
+                        <button type="submit" className="px-4 py-2 bg-blue-600 text-xs text-white rounded-xl font-medium">บันทึก</button>
                       </div>
                     </form>
                   </div>
                 </div>
               )}
+
             </div>
           );
         }
