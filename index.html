@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lab Multi-Column Gantt Timeline</title>
+    <title>Lab Capsule Timeline UI</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -11,8 +11,11 @@
             theme: {
                 extend: {
                     colors: {
-                        darkBg: '#090d16',
-                        cardBg: '#111827',
+                        darkBg: '#121316',
+                        cardBg: '#1c1e22',
+                        capsuleBg: '#2a2d34',
+                        accentBlue: '#3b82f6',
+                        accentPurple: '#a855f7',
                     }
                 }
             }
@@ -22,40 +25,38 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { background-color: #090d16; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: #121316; color: #e5e7eb; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         ::-webkit-scrollbar { height: 6px; width: 6px; }
-        ::-webkit-scrollbar-track { background: #111827; }
-        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #121316; }
+        ::-webkit-scrollbar-thumb { background: #2b2d31; border-radius: 4px; }
     </style>
 </head>
-<body class="min-h-screen pb-16">
+<body class="min-h-screen pb-20">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        const ICONS = ['🧫', '🔬', '🧪', '⏳', '💉', '🧊', '🌡️', '🥼', '🧬', '📊'];
+        const ICONS = ['⏰', '🚗', '🧫', '🔬', '🧪', '⏳', '💉', '🧊', '🌡️', '🥼', '🧬', '📊'];
 
         const TRANSLATIONS = {
           th: {
-            title: "🔬 Lab Multi-Column Timeline",
-            subTitle: "แยกคอลัมน์อัตโนมัติเมื่อมีงานทำซ้อนเวลากัน (Parallel Tasks)",
-            addBtn: "+ เพิ่มขั้นตอน",
-            actionType: "👨‍🔬 Action",
-            incubateType: "⏳ Incubate",
+            title: "Lab Capsule Timeline",
+            addBtn: "+ Add Task",
+            actionType: "Action",
+            incubateType: "Incubate",
             start: "เริ่ม:",
             end: "เสร็จ:",
             duration: "ระยะเวลา:",
-            hrs: "ชม.",
-            mins: "นาที",
-            freeTime: "🌱 ช่วงเวลาว่าง",
-            colTitle: "คอลัมน์งานที่",
+            hrs: "hrs",
+            mins: "min",
+            freeTime: "Free time",
             notesLabel: "📝 โน้ตรายละเอียด / สารเคมี:",
             deleteBtn: "🗑️ ลบขั้นตอน",
             editBtn: "✏️ แก้ไขข้อมูล",
             confirmDelete: "คุณต้องการลบขั้นตอนการทดลองนี้ใช่หรือไม่?",
             formAddTitle: "➕ เพิ่มขั้นตอนการทดลอง",
-            formEditTitle: "✏️️ แก้ไขขั้นตอนการทดลอง",
+            formEditTitle: "✏️ แก้ไขขั้นตอนการทดลอง",
             taskTitleLabel: "ชื่อขั้นตอน *",
             iconLabel: "เลือกไอคอน",
             typeLabel: "ประเภทงาน",
@@ -65,29 +66,27 @@
             save: "บันทึก"
           },
           en: {
-            title: "🔬 Lab Multi-Column Timeline",
-            subTitle: "Auto multi-column split for parallel / overlapping tasks",
-            addBtn: "+ Add Step",
-            actionType: "👨‍🔬 Action",
-            incubateType: "⏳ Incubate",
+            title: "Lab Capsule Timeline",
+            addBtn: "+ Add Task",
+            actionType: "Action",
+            incubateType: "Incubate",
             start: "Start:",
             end: "End:",
             duration: "Duration:",
             hrs: "hrs",
-            mins: "mins",
-            freeTime: "🌱 Free Time",
-            colTitle: "Task Column",
-            notesLabel: "📝 Details / Reagents Notes:",
+            mins: "min",
+            freeTime: "Free time",
+            notesLabel: "📝 Reagents / Notes:",
             deleteBtn: "🗑️ Delete Step",
             editBtn: "✏️ Edit Step",
-            confirmDelete: "Are you sure you want to delete this step?",
+            confirmDelete: "Delete this step?",
             formAddTitle: "➕ Add Experiment Step",
             formEditTitle: "✏️ Edit Experiment Step",
             taskTitleLabel: "Step Title *",
             iconLabel: "Select Icon",
             typeLabel: "Step Type",
             startTimeLabel: "Start Time *",
-            notesFormLabel: "Notes / Reagent Details / Warnings",
+            notesFormLabel: "Notes / Reagent Details",
             cancel: "Cancel",
             save: "Save"
           }
@@ -96,33 +95,33 @@
         const DEFAULT_STEPS = [
           {
             id: 'step-1',
-            title: 'Seed Cells (Plate A)',
-            icon: '🧫',
+            title: 'Rise and Shine (เตรียม Cell)',
+            icon: '⏰',
             type: 'action',
-            startTime: new Date(new Date().setHours(10, 0, 0, 0)).toISOString().slice(0, 16),
-            hours: 2,
-            minutes: 0,
-            notes: 'ใช้ 6-well plate A'
+            startTime: new Date(new Date().setHours(7, 30, 0, 0)).toISOString().slice(0, 16),
+            hours: 1,
+            minutes: 30,
+            notes: 'เตรียม Cell Culture Plate'
           },
           {
             id: 'step-2',
-            title: 'Incubation (Incubator #1)',
-            icon: '⏳',
+            title: 'Work from wild grill restaurant (Incubate ยาว)',
+            icon: '🚗',
             type: 'incubate',
             startTime: new Date(new Date().setHours(12, 0, 0, 0)).toISOString().slice(0, 16),
-            hours: 16,
-            minutes: 0,
-            notes: 'บ่มเซลล์ Plate A 16 ชั่วโมง'
+            hours: 2,
+            minutes: 30,
+            notes: 'บ่มตัวอย่างสารในตู้อบ 2.5 ชม.'
           },
           {
             id: 'step-3',
-            title: 'Prepare Buffer & Reagent B (งานซ้อน)',
+            title: 'Parallel Buffer Prep (งานทำซ้อน)',
             icon: '🧪',
             type: 'action',
-            startTime: new Date(new Date().setHours(14, 0, 0, 0)).toISOString().slice(0, 16),
-            hours: 3,
+            startTime: new Date(new Date().setHours(13, 0, 0, 0)).toISOString().slice(0, 16),
+            hours: 1,
             minutes: 0,
-            notes: 'เตรียมน้ำยาซ้อนระหว่างรอ Incubate Plate A'
+            notes: 'เตรียม Solution ซ้อนช่วง 13:00'
           }
         ];
 
@@ -131,7 +130,7 @@
           const t = TRANSLATIONS[lang];
 
           const [steps, setSteps] = useState(() => {
-            const saved = localStorage.getItem('lab_multicolumn_timeline_v3');
+            const saved = localStorage.getItem('lab_capsule_timeline_v4');
             return saved ? JSON.parse(saved) : DEFAULT_STEPS;
           });
 
@@ -150,11 +149,11 @@
           });
 
           useEffect(() => {
-            localStorage.setItem('lab_multicolumn_timeline_v3', JSON.stringify(steps));
+            localStorage.setItem('lab_capsule_timeline_v4', JSON.stringify(steps));
           }, [steps]);
 
           // Multi-Column Overlap Algorithm
-          const { columns, minStartTime, maxEndTime } = useMemo(() => {
+          const columns = useMemo(() => {
             const sorted = steps.map(step => {
               const start = new Date(step.startTime);
               const durationMins = (parseInt(step.hours || 0) * 60) + parseInt(step.minutes || 0);
@@ -167,15 +166,13 @@
               };
             }).sort((a, b) => a.startDateObj - b.startDateObj);
 
-            if (sorted.length === 0) return { columns: [], minStartTime: new Date(), maxEndTime: new Date() };
+            if (sorted.length === 0) return [];
 
             const cols = [];
-
             sorted.forEach(task => {
               let placed = false;
               for (let col of cols) {
                 const lastTaskInCol = col[col.length - 1];
-                // Check if current task starts after the last task in this column ends
                 if (task.startDateObj >= lastTaskInCol.endDateObj) {
                   col.push(task);
                   placed = true;
@@ -183,14 +180,11 @@
                 }
               }
               if (!placed) {
-                cols.push([task]); // Create new column if overlap
+                cols.push([task]);
               }
             });
 
-            const overallMin = new Date(Math.min(...sorted.map(s => s.startDateObj)));
-            const overallMax = new Date(Math.max(...sorted.map(s => s.endDateObj)));
-
-            return { columns: cols, minStartTime: overallMin, maxEndTime: overallMax };
+            return cols;
           }, [steps]);
 
           const formatTime = (date) => {
@@ -242,103 +236,114 @@
           };
 
           return (
-            <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+            <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
               
               {/* Header */}
-              <div className="flex justify-between items-center bg-cardBg border border-gray-800 p-4 rounded-2xl shadow-xl">
+              <div className="flex justify-between items-center bg-[#1c1e22] border border-gray-800/80 p-4 rounded-3xl shadow-2xl">
                 <div>
-                  <h1 className="font-bold text-lg text-white">{t.title}</h1>
-                  <p className="text-xs text-blue-400">{t.subTitle}</p>
+                  <h1 className="font-bold text-lg text-white tracking-wide">{t.title}</h1>
+                  <p className="text-xs text-gray-400">Minimal Capsule UI + Multi-Column Overlap</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
-                    className="px-2.5 py-1 bg-gray-800 text-xs font-bold text-gray-300 rounded-lg border border-gray-700"
+                    className="px-3 py-1.5 bg-[#2a2d34] text-xs font-bold text-gray-300 rounded-full border border-gray-700/60"
                   >
                     🌐 {lang === 'th' ? 'EN' : 'TH'}
                   </button>
                   <button
                     onClick={() => handleOpenForm(null)}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg"
+                    className="px-4 py-2 bg-[#f87171]/20 hover:bg-[#f87171]/30 text-[#f87171] font-semibold text-xs rounded-full border border-[#f87171]/40 shadow-lg transition"
                   >
-                    {t.addBtn}
+                    + Add Task
                   </button>
                 </div>
               </div>
 
-              {/* Multi-Column Timeline Canvas */}
-              <div className="bg-cardBg border border-gray-800 rounded-2xl p-4 sm:p-6 shadow-xl overflow-x-auto">
-                <div className="min-w-[600px]">
+              {/* Timeline Container */}
+              <div className="bg-[#121316] border border-gray-800/60 rounded-3xl p-4 sm:p-8 shadow-2xl overflow-x-auto">
+                <div className="flex gap-10 min-w-max">
                   
-                  {/* Columns Header */}
-                  <div className="grid gap-4 mb-4" style={{ gridTemplateColumns: `repeat(${columns.length || 1}, minmax(260px, 1fr))` }}>
-                    {columns.map((_, idx) => (
-                      <div key={idx} className="bg-gray-900 border border-gray-800 px-3 py-2 rounded-xl text-xs font-bold text-blue-400 flex items-center justify-between">
-                        <span>{t.colTitle} {idx + 1}</span>
-                        <span className="text-[10px] text-gray-500">Column #{idx + 1}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {columns.length === 0 && (
+                    <div className="text-center py-12 text-gray-500 text-sm w-full">
+                      กดปุ่ม "+ Add Task" เพื่อเพิ่มขั้นตอนการทดลอง
+                    </div>
+                  )}
 
-                  {/* Multi-Column Gantt Grid */}
-                  <div className="grid gap-4 items-start" style={{ gridTemplateColumns: `repeat(${columns.length || 1}, minmax(260px, 1fr))` }}>
-                    {columns.map((colTasks, colIdx) => (
-                      <div key={colIdx} className="space-y-4 border-l border-dashed border-gray-800 pl-3">
+                  {columns.map((colTasks, colIdx) => (
+                    <div key={colIdx} className="flex gap-4 items-start">
+                      
+                      {/* Column Separator if Multi-column */}
+                      {colIdx > 0 && <div className="w-[1px] bg-gray-800/60 self-stretch my-4"></div>}
+
+                      {/* Single Timeline Line Container */}
+                      <div className="relative pl-16 pr-4 space-y-12">
+                        
+                        {/* Dashed Timeline Vertical Line */}
+                        <div className="absolute left-[28px] top-4 bottom-4 w-[2px] border-l-2 border-dashed border-gray-700/60"></div>
+
                         {colTasks.map((step) => {
-                          const isIncubate = step.type === 'incubate';
-                          const calculatedHeight = Math.max(80, Math.floor((step.durationMins / 60) * 40));
+                          const hrs = Math.floor(step.durationMins / 60);
+                          const mins = step.durationMins % 60;
+                          
+                          // Dynamic height for capsule based on duration
+                          const capsuleHeightPx = Math.max(70, Math.floor((step.durationMins / 60) * 55));
 
                           return (
-                            <div
-                              key={step.id}
-                              onClick={() => setSelectedStepForDetail(step)}
-                              style={{ minHeight: `${calculatedHeight}px` }}
-                              className={`p-3.5 rounded-2xl border cursor-pointer transition hover:border-blue-400 flex flex-col justify-between shadow-lg ${
-                                isIncubate ? 'bg-purple-950/30 border-purple-500/40' : 'bg-gray-900/90 border-gray-800'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-2xl p-1.5 rounded-xl bg-gray-800/80 border border-gray-700/60 shrink-0">
-                                    {step.icon || '🧫'}
-                                  </span>
-                                  <div>
-                                    <h3 className="font-bold text-xs sm:text-sm text-white line-clamp-2">{step.title}</h3>
-                                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                                      isIncubate ? 'bg-purple-500/20 text-purple-300' : 'bg-blue-500/20 text-blue-300'
-                                    }`}>
-                                      {isIncubate ? t.incubateType : t.actionType}
-                                    </span>
-                                  </div>
-                                </div>
+                            <div key={step.id} className="relative flex items-center group">
+                              
+                              {/* Left Side Time Indicator */}
+                              <div className="absolute -left-16 text-[11px] font-mono font-medium text-gray-400 select-none">
+                                {formatTime(step.startDateObj)}
                               </div>
 
-                              <div className="mt-3 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[11px] font-mono">
-                                <span className="text-blue-400 font-bold">
-                                  {formatTime(step.startDateObj)}
-                                </span>
-                                <span className="text-gray-500">➔</span>
-                                <span className="text-emerald-400 font-bold">
-                                  {formatTime(step.endDateObj)}
-                                </span>
+                              {/* Vertical Capsule Node (Like Image) */}
+                              <div
+                                onClick={() => setSelectedStepForDetail(step)}
+                                style={{ height: `${capsuleHeightPx}px` }}
+                                className="relative z-10 w-14 rounded-full bg-[#2a2d34] border border-gray-600/40 flex items-center justify-center cursor-pointer hover:border-blue-400 hover:scale-105 transition-all shadow-xl shrink-0"
+                              >
+                                <span className="text-xl">{step.icon || '⏰'}</span>
                               </div>
+
+                              {/* Right Side Task Details (Horizontal Layout) */}
+                              <div 
+                                onClick={() => setSelectedStepForDetail(step)}
+                                className="ml-5 cursor-pointer max-w-xs sm:max-w-sm"
+                              >
+                                {/* Time & Duration Header */}
+                                <div className="text-xs font-mono text-gray-400 flex items-center gap-2">
+                                  <span>{formatTime(step.startDateObj)} – {formatTime(step.endDateObj)}</span>
+                                  <span className="text-gray-500">
+                                    ({hrs > 0 && `${hrs} hrs, `}{mins} min)
+                                  </span>
+                                </div>
+
+                                {/* Task Title */}
+                                <h3 className="text-sm font-bold text-white mt-0.5 tracking-wide line-clamp-2 hover:text-blue-400 transition">
+                                  {step.title}
+                                </h3>
+                              </div>
+
                             </div>
                           );
                         })}
+
                       </div>
-                    ))}
-                  </div>
+
+                    </div>
+                  ))}
 
                 </div>
               </div>
 
-              {/* Detail Modal */}
+              {/* Detail Pop-up Modal */}
               {selectedStepForDetail && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-cardBg border border-gray-800 rounded-2xl p-5 w-full max-w-md space-y-4 shadow-2xl">
+                  <div className="bg-[#1c1e22] border border-gray-800 rounded-3xl p-6 w-full max-w-md space-y-5 shadow-2xl">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-2xl">
+                        <div className="w-12 h-12 rounded-2xl bg-[#2a2d34] border border-gray-700 flex items-center justify-center text-2xl shadow-inner">
                           {selectedStepForDetail.icon}
                         </div>
                         <div>
@@ -351,7 +356,7 @@
                       <button onClick={() => setSelectedStepForDetail(null)} className="text-gray-400 hover:text-white">✕</button>
                     </div>
 
-                    <div className="bg-gray-900 p-3.5 rounded-xl border border-gray-800 space-y-2 text-xs">
+                    <div className="bg-[#121316] p-4 rounded-2xl border border-gray-800/80 space-y-2 text-xs">
                       <div className="flex justify-between">
                         <span className="text-gray-400">{t.start}</span>
                         <span className="font-mono text-blue-400 font-bold">
@@ -373,7 +378,7 @@
                     </div>
 
                     {selectedStepForDetail.notes && (
-                      <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-800 text-xs text-gray-300">
+                      <div className="p-3.5 bg-[#121316]/60 rounded-2xl border border-gray-800/80 text-xs text-gray-300">
                         <span className="text-gray-400 font-bold block mb-1">{t.notesLabel}</span>
                         {selectedStepForDetail.notes}
                       </div>
@@ -382,7 +387,7 @@
                     <div className="flex justify-between items-center pt-2 border-t border-gray-800">
                       <button
                         onClick={() => handleDeleteStep(selectedStepForDetail.id)}
-                        className="px-3 py-1.5 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs rounded-xl"
+                        className="px-4 py-2 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 text-xs rounded-full font-medium"
                       >
                         {t.deleteBtn}
                       </button>
@@ -392,7 +397,7 @@
                           setSelectedStepForDetail(null);
                           handleOpenForm(target);
                         }}
-                        className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium rounded-xl"
+                        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-xs text-white font-medium rounded-full shadow-lg"
                       >
                         {t.editBtn}
                       </button>
@@ -404,7 +409,7 @@
               {/* Add / Edit Form Modal */}
               {isFormOpen && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                  <div className="bg-cardBg border border-gray-800 rounded-2xl p-5 w-full max-w-md space-y-4">
+                  <div className="bg-[#1c1e22] border border-gray-800 rounded-3xl p-6 w-full max-w-md space-y-4">
                     <h3 className="text-base font-bold text-white">
                       {editingStep ? t.formEditTitle : t.formAddTitle}
                     </h3>
@@ -417,7 +422,7 @@
                           required
                           value={formData.title}
                           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2.5 text-sm text-white"
+                          className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-3 text-sm text-white focus:outline-none focus:border-blue-500"
                         />
                       </div>
 
@@ -429,8 +434,8 @@
                               key={ico}
                               type="button"
                               onClick={() => setFormData({ ...formData, icon: ico })}
-                              className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg border shrink-0 ${
-                                formData.icon === ico ? 'bg-blue-600 border-blue-400' : 'bg-gray-900 border-gray-800'
+                              className={`w-10 h-10 rounded-2xl flex items-center justify-center text-lg border shrink-0 transition ${
+                                formData.icon === ico ? 'bg-blue-600 border-blue-400 text-white' : 'bg-[#121316] border-gray-800 text-gray-300'
                               }`}
                             >
                               {ico}
@@ -445,7 +450,7 @@
                           <select
                             value={formData.type}
                             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2 text-sm text-white"
+                            className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-2.5 text-xs text-white"
                           >
                             <option value="action">{t.actionType}</option>
                             <option value="incubate">{t.incubateType}</option>
@@ -459,7 +464,7 @@
                             required
                             value={formData.startTime}
                             onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2 text-xs text-white"
+                            className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-2.5 text-xs text-white"
                           />
                         </div>
                       </div>
@@ -472,7 +477,7 @@
                             min="0"
                             value={formData.hours}
                             onChange={(e) => setFormData({ ...formData, hours: parseInt(e.target.value) || 0 })}
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2 text-sm text-white"
+                            className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-2.5 text-sm text-white"
                           />
                         </div>
                         <div>
@@ -483,7 +488,7 @@
                             max="59"
                             value={formData.minutes}
                             onChange={(e) => setFormData({ ...formData, minutes: parseInt(e.target.value) || 0 })}
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2 text-sm text-white"
+                            className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-2.5 text-sm text-white"
                           />
                         </div>
                       </div>
@@ -494,13 +499,13 @@
                           rows={2}
                           value={formData.notes}
                           onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                          className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2.5 text-sm text-white"
+                          className="w-full bg-[#121316] border border-gray-800 rounded-2xl p-3 text-sm text-white"
                         />
                       </div>
 
                       <div className="flex justify-end gap-2 pt-2 border-t border-gray-800">
-                        <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 bg-gray-800 text-xs text-gray-300 rounded-xl">{t.cancel}</button>
-                        <button type="submit" className="px-4 py-2 bg-blue-600 text-xs text-white rounded-xl font-medium">{t.save}</button>
+                        <button type="button" onClick={() => setIsFormOpen(false)} className="px-4 py-2 bg-gray-800 text-xs text-gray-300 rounded-full">{t.cancel}</button>
+                        <button type="submit" className="px-5 py-2 bg-blue-600 text-xs text-white rounded-full font-medium shadow-lg">{t.save}</button>
                       </div>
                     </form>
                   </div>
