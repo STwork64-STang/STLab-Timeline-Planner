@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lab Workflow & Timeline Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0b0f17',
+                        cardBg: '#111827',
+                        accentBlue: '#3b82f6',
+                        accentPurple: '#8b5cf6',
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { background-color: #0b0f17; color: #f3f4f6; font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo } = React;
+
+        const TRANSLATIONS = {
+          th: {
+            title: "🧪 Lab Timeline Planner",
+            subTitle: "ระบบวางแผนไทม์ไลน์การทดลองและเลี้ยงเซลล์",
+            startTime: "เวลาเริ่มต้นการทดลอง:",
+            addTask: "+ เพิ่มขั้นตอนแล็บ",
+            typeAction: "👨‍🔬 งานที่ต้องทำ (Hands-on)",
+            typeIncubate: "⏳ เวลาบ่ม/รอ (Incubation/Wait)",
+            step: "ขั้นตอนที่",
+            duration: "ระยะเวลา:",
+            startAt: "เริ่ม:",
+            endAt: "เสร็จ/พร้อมทำต่อ:",
+            hrs: "ชม.",
+            mins: "นาที",
+            overnightNote: "🌙 ข้ามไปวันถัดไป",
+            taskTitle: "ชื่อขั้นตอนการทดลอง",
+            taskType: "ประเภทงาน",
+            notes: "บันทึกเพิ่มเติม / โน้ตสารเคมี",
+            save: "บันทึก",
+            cancel: "ยกเลิก",
+            delete: "ลบ",
+            presetBtn: "🔄 โหลดตัวอย่างการเลี้ยงเซลล์ (16 ชม.)"
+          },
+          en: {
+            title: "🧪 Lab Timeline Planner",
+            subTitle: "Experiment & Cell Culture Timeline Scheduler",
+            startTime: "Experiment Start Time:",
+            addTask: "+ Add Step",
+            typeAction: "👨‍🔬 Hands-on Action",
+            typeIncubate: "⏳ Incubation / Wait",
+            step: "Step",
+            duration: "Duration:",
+            startAt: "Start:",
+            endAt: "End / Next Ready:",
+            hrs: "hrs",
+            mins: "mins",
+            overnightNote: "🌙 Next Day",
+            taskTitle: "Step Title / Protocol",
+            taskType: "Step Type",
+            notes: "Notes / Reagent Details",
+            save: "Save Step",
+            cancel: "Cancel",
+            delete: "Delete",
+            presetBtn: "🔄 Load Cell Culture Template (16h)"
+          }
+        };
+
+        const DEFAULT_STEPS = [
+          { id: '1', title: 'Seed Cells (เลี้ยงเซลล์ลง Plate)', hours: 2, minutes: 0, type: 'action', notes: 'ใช้ 6-well plate, Density 1x10^5 cells/well' },
+          { id: '2', title: 'Incubation (บ่มเซลล์ในตู้ CO2)', hours: 16, minutes: 0, type: 'incubate', notes: '37°C, 5% CO2' },
+          { id: '3', title: 'Drug Treatment / Experiment (เริ่มการทดลองถัดไป)', hours: 1, minutes: 30, type: 'action', notes: 'ใส่สารทดลองกลุ่ม A และ B' }
+        ];
+
+        function App() {
+          const [lang, setLang] = useState('th');
+          const t = TRANSLATIONS[lang];
+
+          // Default start time: Today 10:00 AM
+          const [startTimeStr, setStartTimeStr] = useState(() => {
+            const now = new Date();
+            now.setHours(10, 0, 0, 0);
+            return now.toISOString().slice(0, 16);
+          });
+
+          const [steps, setSteps] = useState(DEFAULT_STEPS);
+          const [isModalOpen, setIsModalOpen] = useState(false);
+          const [formData, setFormData] = useState({ title: '', hours: 1, minutes: 0, type: 'action', notes: '' });
+
+          // Calculate Timeline Schedule
+          const calculatedTimeline = useMemo(() => {
+            let currentCursor = new Date(startTimeStr);
+            if (isNaN(currentCursor.getTime())) currentCursor = new Date();
+
+            return steps.map((step) => {
+              const start = new Date(currentCursor);
+              const durationMs = ((parseInt(step.hours || 0) * 60) + parseInt(step.minutes || 0)) * 60 * 1000;
+              const end = new Date(start.getTime() + durationMs);
+
+              // Update cursor for next step
+              currentCursor = new Date(end);
+
+              const isOvernight = start.getDate() !== end.getDate();
+
+              return {
+                ...step,
+                startTime: start,
+                endTime: end,
+                isOvernight
+              };
+            });
+          }, [startTimeStr, steps]);
+
+          const formatTime = (date) => {
+            return date.toLocaleTimeString(lang === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+          };
+
+          const formatDate = (date) => {
+            return date.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { month: 'short', day: 'numeric' });
+          };
+
+          const handleAddStep = (e) => {
+            e.preventDefault();
+            if (!formData.title.trim()) return;
+            setSteps([...steps, { ...formData, id: Date.now().toString() }]);
+            setIsModalOpen(false);
+            setFormData({ title: '', hours: 1, minutes: 0, type: 'action', notes: '' });
+          };
+
+          const handleDeleteStep = (id) => {
+            setSteps(steps.filter(s => s.id !== id));
+          };
+
+          return (
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+              {/* Header */}
+              <div className="flex justify-between items-center bg-cardBg border border-gray-800 p-4 rounded-2xl">
+                <div>
+                  <h1 className="font-bold text-lg text-white">{t.title}</h1>
+                  <p className="text-xs text-blue-400">{t.subTitle}</p>
+                </div>
+                <button
+                  onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
+                  className="px-3 py-1 bg-gray-800 text-xs text-gray-300 font-bold rounded-lg border border-gray-700"
+                >
+                  🌐 {lang === 'th' ? 'EN' : 'TH'}
+                </button>
+              </div>
+
+              {/* Start Time Config */}
+              <div className="bg-cardBg border border-gray-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">⏰</span>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">{t.startTime}</label>
+                    <input
+                      type="datetime-local"
+                      value={startTimeStr}
+                      onChange={(e) => setStartTimeStr(e.target.value)}
+                      className="bg-gray-900 border border-gray-700 rounded-xl px-3 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSteps(DEFAULT_STEPS)}
+                  className="text-xs text-gray-400 hover:text-blue-400 underline"
+                >
+                  {t.presetBtn}
+                </button>
+              </div>
+
+              {/* Action Bar */}
+              <div className="flex justify-between items-center">
+                <h2 className="text-sm font-bold text-gray-300">Lab Pipeline Steps ({steps.length})</h2>
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg transition"
+                >
+                  {t.addTask}
+                </button>
+              </div>
+
+              {/* Timeline Display */}
+              <div className="relative border-l-2 border-blue-500/30 ml-4 pl-6 space-y-6">
+                {calculatedTimeline.map((step, index) => (
+                  <div key={step.id} className="relative group">
+                    {/* Timeline Dot */}
+                    <div className={`absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-2 ${
+                      step.type === 'incubate' ? 'bg-purple-500 border-purple-300 shadow-[0_0_10px_rgba(139,92,246,0.5)]' : 'bg-blue-500 border-blue-300'
+                    }`} />
+
+                    <div className={`p-4 rounded-2xl border ${
+                      step.type === 'incubate' ? 'bg-purple-950/20 border-purple-500/30' : 'bg-cardBg border-gray-800'
+                    }`}>
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <div>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            step.type === 'incubate' ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          }`}>
+                            {step.type === 'incubate' ? t.typeIncubate : t.typeAction}
+                          </span>
+                          <h3 className="text-base font-bold text-white mt-1">
+                            {t.step} {index + 1}: {step.title}
+                          </h3>
+                        </div>
+                        <button onClick={() => handleDeleteStep(step.id)} className="text-xs text-gray-500 hover:text-rose-400">
+                          {t.delete}
+                        </button>
+                      </div>
+
+                      {/* Time Schedule Highlight */}
+                      <div className="grid grid-cols-2 gap-2 my-3 p-2.5 bg-gray-900/60 rounded-xl border border-gray-800/80 text-xs">
+                        <div>
+                          <span className="text-gray-400 block">{t.startAt}</span>
+                          <span className="font-mono font-bold text-blue-400 text-sm">
+                            {formatTime(step.startTime)} <span className="text-[10px] text-gray-500">({formatDate(step.startTime)})</span>
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-400 block">{t.endAt}</span>
+                          <span className="font-mono font-bold text-emerald-400 text-sm">
+                            {formatTime(step.endTime)} <span className="text-[10px] text-gray-500">({formatDate(step.endTime)})</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-xs text-gray-400">
+                        <span>⏳ {t.duration} {step.hours > 0 && `${step.hours} ${t.hrs} `}{step.minutes} {t.mins}</span>
+                        {step.isOvernight && <span className="text-amber-400 font-medium">{t.overnightNote}</span>}
+                      </div>
+
+                      {step.notes && (
+                        <div className="mt-2 pt-2 border-t border-gray-800/60 text-xs text-gray-400 italic">
+                          📝 {step.notes}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Step Modal */}
+              {isModalOpen && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                  <div className="bg-cardBg border border-gray-800 rounded-2xl p-5 w-full max-w-md space-y-4">
+                    <h3 className="text-base font-bold text-white">{t.addTask}</h3>
+                    <form onSubmit={handleAddStep} className="space-y-3">
+                      <div>
+                        <label className="block text-xs text-gray-300 mb-1">{t.taskTitle}</label>
+                        <input
+                          type="text"
+                          required
+                          value={formData.title}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2.5 text-sm text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-gray-300 mb-1">{t.taskType}</label>
+                        <select
+                          value={formData.type}
+                          onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2.5 text-sm text-white"
+                        >
+                          <option value="action">{t.typeAction}</option>
+                          <option value="incubate">{t.typeIncubate}</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-300 mb-1">{t.hrs}</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={formData.hours}
+                            onChange={(e) => setFormData({ ...formData, hours: parseInt(e.target.value) || 0 })}
+                            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2 text-sm text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-300 mb-1">{t.mins}</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="59"
+                            value={formData.minutes}
+                            onChange={(e) => setFormData({ ...formData, minutes: parseInt(e.target.value) || 0 })}
+                            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2 text-sm text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-gray-300 mb-1">{t.notes}</label>
+                        <textarea
+                          rows={2}
+                          value={formData.notes}
+                          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                          className="w-full bg-gray-900 border border-gray-800 rounded-xl p-2.5 text-sm text-white"
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2 pt-2">
+                        <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-gray-800 text-xs text-gray-300 rounded-xl">{t.cancel}</button>
+                        <button type="submit" className="px-4 py-2 bg-blue-600 text-xs text-white rounded-xl font-medium">{t.save}</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
