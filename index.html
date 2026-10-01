@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lab Calendar - Multi-day & Date Filter</title>
+    <title>Lab Schedule Calendar - Secure Local Data</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -33,10 +33,13 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useRef } = React;
 
         const ICONS = ['🧫', '🔬', '🧪', '⏳', '💉', '🧊', '🌡️', '🥼', '🧬', '📊', '⏰', '🚗'];
-        const HOUR_HEIGHT = 60; // 1 hour = 60px
+        const HOUR_HEIGHT = 60; 
+        
+        // 🔒 ล็อกชื่อ KEY หลักถาวร (ห้ามเปลี่ยนชื่อนี้ในอนาคตเพื่อไม่ให้ข้อมูลผู้ใช้หาย)
+        const STORAGE_KEY = 'PERMANENT_LAB_SCHEDULE_DATA_V1';
 
         const TRANSLATIONS = {
           th: {
@@ -63,7 +66,11 @@
             startTimeLabel: "เวลาเริ่ม (Start Time) *",
             notesFormLabel: "บันทึกเพิ่มเติม / สารเคมี / ข้อควรระวัง",
             cancel: "ยกเลิก",
-            save: "บันทึก"
+            save: "บันทึก",
+            exportBtn: "📥 สำรองข้อมูล (Backup)",
+            importBtn: "📤 ดึงข้อมูลคืน (Restore)",
+            importSuccess: "ดึงข้อมูลกลับมาเรียบร้อยแล้ว!",
+            importError: "ไฟล์ข้อมูลไม่ถูกต้อง"
           },
           en: {
             title: "🔬 Lab Schedule Calendar",
@@ -89,7 +96,11 @@
             startTimeLabel: "Start Time *",
             notesFormLabel: "Notes / Reagent Details",
             cancel: "Cancel",
-            save: "Save"
+            save: "Save",
+            exportBtn: "📥 Backup Data",
+            importBtn: "📤 Restore Data",
+            importSuccess: "Data restored successfully!",
+            importError: "Invalid data file"
           }
         };
 
@@ -103,32 +114,31 @@
             hours: 1,
             minutes: 30,
             notes: 'เตรียม Plate ในตู้ Biocabin'
-          },
-          {
-            id: 'step-2',
-            title: 'บ่มข้ามคืน (Overnight Incubate)',
-            icon: '⏳',
-            type: 'incubate',
-            startTime: new Date(new Date().setHours(20, 0, 0, 0)).toISOString().slice(0, 16),
-            hours: 12,
-            minutes: 0,
-            notes: 'บ่มข้ามวันจาก 20:00 ไปเสร็จ 08:00 ของวันพรุ่งนี้'
           }
         ];
 
         function App() {
           const [lang, setLang] = useState('th');
           const t = TRANSLATIONS[lang];
+          const fileInputRef = useRef(null);
 
-          // Current View Date
           const [selectedDate, setSelectedDate] = useState(() => {
-            const today = new Date();
-            return today.toISOString().slice(0, 10); // YYYY-MM-DD
+            return new Date().toISOString().slice(0, 10);
           });
 
+          // ดึงข้อมูลจาก LocalStorage + มีระบบ Data Migration ค้นหาข้อมูลเก่ามาช่วยชีวิต
           const [steps, setSteps] = useState(() => {
-            const saved = localStorage.getItem('lab_gcalendar_timeline_v6');
-            return saved ? JSON.parse(saved) : DEFAULT_STEPS;
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) return JSON.parse(saved);
+
+            // ค้นหาเผื่อมีข้อมูลตกค้างจาก Key เวอร์ชันเก่าๆ
+            const oldKeys = ['lab_gcalendar_timeline_v6', 'lab_gcalendar_timeline_v5', 'lab_capsule_timeline_v4'];
+            for (let k of oldKeys) {
+              const oldData = localStorage.getItem(k);
+              if (oldData) return JSON.parse(oldData);
+            }
+
+            return DEFAULT_STEPS;
           });
 
           const [selectedStepForDetail, setSelectedStepForDetail] = useState(null);
@@ -146,21 +156,50 @@
           });
 
           useEffect(() => {
-            localStorage.setItem('lab_gcalendar_timeline_v6', JSON.stringify(steps));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(steps));
           }, [steps]);
 
-          // Shift date by +/- 1 day
+          // ระบบ Export สำรองข้อมูลเป็นไฟล์ JSON
+          const handleExportData = () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(steps, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `lab_backup_${new Date().toISOString().slice(0, 10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+          };
+
+          // ระบบ Import ดึงข้อมูลจากไฟล์ JSON กลับเข้าเครื่อง
+          const handleImportData = (e) => {
+            const fileReader = new FileReader();
+            if (e.target.files && e.target.files[0]) {
+              fileReader.readAsText(e.target.files[0], "UTF-8");
+              fileReader.onload = (event) => {
+                try {
+                  const importedSteps = JSON.parse(event.target.result);
+                  if (Array.isArray(importedSteps)) {
+                    setSteps(importedSteps);
+                    alert(t.importSuccess);
+                  } else {
+                    alert(t.importError);
+                  }
+                } catch (error) {
+                  alert(t.importError);
+                }
+              };
+            }
+          };
+
           const changeDate = (days) => {
             const d = new Date(selectedDate);
             d.setDate(d.getDate() + days);
             setSelectedDate(d.toISOString().slice(0, 10));
           };
 
-          // Filter and process tasks for Selected Date ONLY + Cross-day Clipping
           const processedTasks = useMemo(() => {
             const viewStart = new Date(`${selectedDate}T00:00:00`);
             const viewEnd = new Date(`${selectedDate}T23:59:59`);
-
             const visibleItems = [];
 
             steps.forEach(step => {
@@ -168,15 +207,11 @@
               const durationMins = (parseInt(step.hours || 0) * 60) + parseInt(step.minutes || 0);
               const end = new Date(start.getTime() + durationMins * 60 * 1000);
 
-              // Check if task overlaps with the selected view date
               if (start <= viewEnd && end >= viewStart) {
-                // Calculate display start & end inside current 24-hour view
                 const effStart = start < viewStart ? viewStart : start;
                 const effEnd = end > viewEnd ? viewEnd : end;
 
                 const startMins = effStart.getHours() * 60 + effStart.getMinutes();
-                const endMins = effEnd.getHours() * 60 + effEnd.getMinutes();
-                
                 const topPx = (startMins / 60) * HOUR_HEIGHT;
                 const displayDurationMins = Math.max(20, (effEnd - effStart) / (1000 * 60));
                 const heightPx = (displayDurationMins / 60) * HOUR_HEIGHT;
@@ -195,10 +230,8 @@
               }
             });
 
-            // Sort by start time
             visibleItems.sort((a, b) => a.effStart - b.effStart);
 
-            // Calculate Overlap Columns (Side-by-Side)
             for (let i = 0; i < visibleItems.length; i++) {
               let overlapGroup = [visibleItems[i]];
               for (let j = 0; j < visibleItems.length; j++) {
@@ -271,20 +304,48 @@
           return (
             <div className="max-w-4xl mx-auto px-3 sm:px-4 py-6 space-y-4">
               
-              {/* Header */}
+              {/* Header Bar */}
               <div className="bg-[#1c1e22] border border-gray-800 p-4 rounded-2xl shadow-xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <h1 className="font-bold text-base sm:text-lg text-white">{t.title}</h1>
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-wrap justify-between items-center gap-2">
+                  <div>
+                    <h1 className="font-bold text-base sm:text-lg text-white">{t.title}</h1>
+                    <p className="text-xs text-emerald-400">🔒 Local Storage Mode (100% Private)</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* ปุ่ม Backup / Restore */}
+                    <button
+                      onClick={handleExportData}
+                      className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-emerald-400 rounded-xl border border-gray-700"
+                      title="สำรองข้อมูลลงเครื่อง"
+                    >
+                      {t.exportBtn}
+                    </button>
+                    
+                    <button
+                      onClick={() => fileInputRef.current.click()}
+                      className="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-xs font-semibold text-amber-400 rounded-xl border border-gray-700"
+                      title="ดึงข้อมูลจากไฟล์ backup"
+                    >
+                      {t.importBtn}
+                    </button>
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      onChange={handleImportData} 
+                      accept=".json" 
+                      className="hidden" 
+                    />
+
                     <button
                       onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
-                      className="px-2.5 py-1 bg-gray-800 text-xs font-bold text-gray-300 rounded-lg border border-gray-700"
+                      className="px-2.5 py-1.5 bg-gray-800 text-xs font-bold text-gray-300 rounded-xl border border-gray-700"
                     >
                       🌐 {lang === 'th' ? 'EN' : 'TH'}
                     </button>
                     <button
                       onClick={() => handleOpenForm(null)}
-                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg"
+                      className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg"
                     >
                       {t.addBtn}
                     </button>
@@ -364,26 +425,22 @@
                               : 'bg-blue-950/90 border-blue-500/60 text-blue-100 hover:border-blue-300'
                           }`}
                         >
-                          {/* Icon */}
                           <div className={`p-1 rounded-lg text-base sm:text-xl shrink-0 ${
                             isIncubate ? 'bg-purple-900/60' : 'bg-blue-900/60'
                           }`}>
                             {task.icon || '🧫'}
                           </div>
 
-                          {/* Task Info */}
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-bold text-xs truncate">{task.title}</span>
                               
-                              {/* Next Day Spill-over Badge */}
                               {task.isSpillOverNextDay && (
                                 <span className="bg-rose-500/30 text-rose-300 text-[9px] px-1.5 py-0.5 rounded border border-rose-500/40 font-bold shrink-0">
                                   🌙 {t.nextDayBadge} (ถึง {formatTime(task.endDateObj)})
                                 </span>
                               )}
                               
-                              {/* Prev Day Continuation Badge */}
                               {task.isSpillFromPrevDay && (
                                 <span className="bg-amber-500/30 text-amber-300 text-[9px] px-1.5 py-0.5 rounded border border-amber-500/40 font-bold shrink-0">
                                   🔄 ต่อจากเมื่อวาน
