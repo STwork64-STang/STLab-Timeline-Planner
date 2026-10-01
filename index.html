@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lab Google Calendar Style Timeline</title>
+    <title>Lab Calendar - Multi-day & Date Filter</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -36,11 +36,11 @@
         const { useState, useEffect, useMemo } = React;
 
         const ICONS = ['🧫', '🔬', '🧪', '⏳', '💉', '🧊', '🌡️', '🥼', '🧬', '📊', '⏰', '🚗'];
-        const HOUR_HEIGHT = 60; // 1 hour = 60px high in timeline
+        const HOUR_HEIGHT = 60; // 1 hour = 60px
 
         const TRANSLATIONS = {
           th: {
-            title: "🔬 Lab Schedule Calendar View",
+            title: "🔬 Lab Schedule Calendar",
             addBtn: "+ เพิ่มงาน",
             actionType: "🛠️ ทำงาน",
             incubateType: "⏳ รอ",
@@ -49,6 +49,8 @@
             duration: "ระยะเวลา:",
             hrs: "ชม.",
             mins: "นาที",
+            today: "วันนี้",
+            nextDayBadge: "+1 วัน",
             notesLabel: "📝 โน้ตรายละเอียด / สารเคมี:",
             deleteBtn: "🗑️ ลบขั้นตอน",
             editBtn: "✏️ แก้ไขข้อมูล",
@@ -64,7 +66,7 @@
             save: "บันทึก"
           },
           en: {
-            title: "🔬 Lab Schedule Calendar View",
+            title: "🔬 Lab Schedule Calendar",
             addBtn: "+ Add Task",
             actionType: "🛠️ Work",
             incubateType: "⏳ Wait",
@@ -73,6 +75,8 @@
             duration: "Duration:",
             hrs: "hrs",
             mins: "min",
+            today: "Today",
+            nextDayBadge: "+1 Day",
             notesLabel: "📝 Details / Reagents Notes:",
             deleteBtn: "🗑️ Delete Step",
             editBtn: "✏️ Edit Step",
@@ -92,33 +96,23 @@
         const DEFAULT_STEPS = [
           {
             id: 'step-1',
-            title: 'เลี้ยงเซลล์ลง Plate (Plate A)',
+            title: 'เลี้ยงเซลล์ลง Plate A',
             icon: '🧫',
             type: 'action',
             startTime: new Date(new Date().setHours(8, 0, 0, 0)).toISOString().slice(0, 16),
             hours: 1,
             minutes: 30,
-            notes: 'ใช้ 6-well plate A'
+            notes: 'เตรียม Plate ในตู้ Biocabin'
           },
           {
             id: 'step-2',
-            title: 'บ่มตัวอย่างในตู้อบ (Incubation)',
+            title: 'บ่มข้ามคืน (Overnight Incubate)',
             icon: '⏳',
             type: 'incubate',
-            startTime: new Date(new Date().setHours(10, 0, 0, 0)).toISOString().slice(0, 16),
-            hours: 3,
+            startTime: new Date(new Date().setHours(20, 0, 0, 0)).toISOString().slice(0, 16),
+            hours: 12,
             minutes: 0,
-            notes: 'บ่มเซลล์ 3 ชั่วโมง ที่ 37°C'
-          },
-          {
-            id: 'step-3',
-            title: 'เตรียม Solution B (งานซ้อนเวลากัน)',
-            icon: '🧪',
-            type: 'action',
-            startTime: new Date(new Date().setHours(11, 0, 0, 0)).toISOString().slice(0, 16),
-            hours: 1,
-            minutes: 30,
-            notes: 'เตรียมสารซ้อนช่วงรอ Incubate'
+            notes: 'บ่มข้ามวันจาก 20:00 ไปเสร็จ 08:00 ของวันพรุ่งนี้'
           }
         ];
 
@@ -126,8 +120,14 @@
           const [lang, setLang] = useState('th');
           const t = TRANSLATIONS[lang];
 
+          // Current View Date
+          const [selectedDate, setSelectedDate] = useState(() => {
+            const today = new Date();
+            return today.toISOString().slice(0, 10); // YYYY-MM-DD
+          });
+
           const [steps, setSteps] = useState(() => {
-            const saved = localStorage.getItem('lab_gcalendar_timeline_v5');
+            const saved = localStorage.getItem('lab_gcalendar_timeline_v6');
             return saved ? JSON.parse(saved) : DEFAULT_STEPS;
           });
 
@@ -146,50 +146,77 @@
           });
 
           useEffect(() => {
-            localStorage.setItem('lab_gcalendar_timeline_v5', JSON.stringify(steps));
+            localStorage.setItem('lab_gcalendar_timeline_v6', JSON.stringify(steps));
           }, [steps]);
 
-          // Process Google Calendar Day-Grid Overlap Positioning
+          // Shift date by +/- 1 day
+          const changeDate = (days) => {
+            const d = new Date(selectedDate);
+            d.setDate(d.getDate() + days);
+            setSelectedDate(d.toISOString().slice(0, 10));
+          };
+
+          // Filter and process tasks for Selected Date ONLY + Cross-day Clipping
           const processedTasks = useMemo(() => {
-            const items = steps.map(step => {
+            const viewStart = new Date(`${selectedDate}T00:00:00`);
+            const viewEnd = new Date(`${selectedDate}T23:59:59`);
+
+            const visibleItems = [];
+
+            steps.forEach(step => {
               const start = new Date(step.startTime);
               const durationMins = (parseInt(step.hours || 0) * 60) + parseInt(step.minutes || 0);
               const end = new Date(start.getTime() + durationMins * 60 * 1000);
-              
-              const startMinutesFromMidnight = start.getHours() * 60 + start.getMinutes();
-              const topPx = (startMinutesFromMidnight / 60) * HOUR_HEIGHT;
-              const heightPx = Math.max(35, (durationMins / 60) * HOUR_HEIGHT);
 
-              return {
-                ...step,
-                startDateObj: start,
-                endDateObj: end,
-                durationMins,
-                topPx,
-                heightPx
-              };
-            }).sort((a, b) => a.startDateObj - b.startDateObj);
+              // Check if task overlaps with the selected view date
+              if (start <= viewEnd && end >= viewStart) {
+                // Calculate display start & end inside current 24-hour view
+                const effStart = start < viewStart ? viewStart : start;
+                const effEnd = end > viewEnd ? viewEnd : end;
 
-            // Calculate Overlaps for Side-by-Side placement
-            for (let i = 0; i < items.length; i++) {
-              let overlapGroup = [items[i]];
-              for (let j = 0; j < items.length; j++) {
+                const startMins = effStart.getHours() * 60 + effStart.getMinutes();
+                const endMins = effEnd.getHours() * 60 + effEnd.getMinutes();
+                
+                const topPx = (startMins / 60) * HOUR_HEIGHT;
+                const displayDurationMins = Math.max(20, (effEnd - effStart) / (1000 * 60));
+                const heightPx = (displayDurationMins / 60) * HOUR_HEIGHT;
+
+                visibleItems.push({
+                  ...step,
+                  startDateObj: start,
+                  endDateObj: end,
+                  effStart,
+                  effEnd,
+                  topPx,
+                  heightPx,
+                  isSpillOverNextDay: end > viewEnd,
+                  isSpillFromPrevDay: start < viewStart,
+                });
+              }
+            });
+
+            // Sort by start time
+            visibleItems.sort((a, b) => a.effStart - b.effStart);
+
+            // Calculate Overlap Columns (Side-by-Side)
+            for (let i = 0; i < visibleItems.length; i++) {
+              let overlapGroup = [visibleItems[i]];
+              for (let j = 0; j < visibleItems.length; j++) {
                 if (i !== j) {
-                  const a = items[i];
-                  const b = items[j];
-                  if (a.startDateObj < b.endDateObj && a.endDateObj > b.startDateObj) {
+                  const a = visibleItems[i];
+                  const b = visibleItems[j];
+                  if (a.effStart < b.effEnd && a.effEnd > b.effStart) {
                     overlapGroup.push(b);
                   }
                 }
               }
               overlapGroup.sort((a, b) => a.id.localeCompare(b.id));
-              const colIndex = overlapGroup.findIndex(item => item.id === items[i].id);
-              items[i].totalCols = overlapGroup.length;
-              items[i].colIndex = colIndex;
+              visibleItems[i].totalCols = overlapGroup.length;
+              visibleItems[i].colIndex = overlapGroup.findIndex(item => item.id === visibleItems[i].id);
             }
 
-            return items;
-          }, [steps]);
+            return visibleItems;
+          }, [steps, selectedDate]);
 
           const hoursList = Array.from({ length: 24 }, (_, i) => i);
 
@@ -198,9 +225,9 @@
             return date.toLocaleTimeString(lang === 'th' ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
           };
 
-          const formatDate = (date) => {
-            if (!date || isNaN(date.getTime())) return '';
-            return date.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { month: 'short', day: 'numeric' });
+          const formatDateStr = (dateStr) => {
+            const d = new Date(dateStr);
+            return d.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
           };
 
           const handleOpenForm = (stepToEdit = null) => {
@@ -213,7 +240,7 @@
                 title: '',
                 icon: '🧫',
                 type: 'action',
-                startTime: new Date().toISOString().slice(0, 16),
+                startTime: `${selectedDate}T09:00`,
                 hours: 1,
                 minutes: 0,
                 notes: ''
@@ -245,32 +272,63 @@
             <div className="max-w-4xl mx-auto px-3 sm:px-4 py-6 space-y-4">
               
               {/* Header */}
-              <div className="flex justify-between items-center bg-[#1c1e22] border border-gray-800 p-4 rounded-2xl shadow-xl">
-                <div>
+              <div className="bg-[#1c1e22] border border-gray-800 p-4 rounded-2xl shadow-xl space-y-3">
+                <div className="flex justify-between items-center">
                   <h1 className="font-bold text-base sm:text-lg text-white">{t.title}</h1>
-                  <p className="text-xs text-blue-400">Google Calendar Style • Overlap View</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
+                      className="px-2.5 py-1 bg-gray-800 text-xs font-bold text-gray-300 rounded-lg border border-gray-700"
+                    >
+                      🌐 {lang === 'th' ? 'EN' : 'TH'}
+                    </button>
+                    <button
+                      onClick={() => handleOpenForm(null)}
+                      className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg"
+                    >
+                      {t.addBtn}
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setLang(lang === 'th' ? 'en' : 'th')}
-                    className="px-2.5 py-1 bg-gray-800 text-xs font-bold text-gray-300 rounded-lg border border-gray-700"
+
+                {/* Date Navigator Bar */}
+                <div className="flex items-center justify-between bg-[#121316] p-2 rounded-xl border border-gray-800">
+                  <button 
+                    onClick={() => changeDate(-1)} 
+                    className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 rounded-lg font-bold"
                   >
-                    🌐 {lang === 'th' ? 'EN' : 'TH'}
+                    ◀ ก่อนหน้า
                   </button>
-                  <button
-                    onClick={() => handleOpenForm(null)}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs rounded-xl shadow-lg"
+
+                  <div className="flex items-center gap-2">
+                    <input 
+                      type="date" 
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="bg-transparent text-xs sm:text-sm font-bold text-blue-400 focus:outline-none cursor-pointer"
+                    />
+                    <button 
+                      onClick={() => setSelectedDate(new Date().toISOString().slice(0, 10))}
+                      className="px-2 py-0.5 bg-blue-500/20 text-blue-400 text-[10px] rounded border border-blue-500/40 font-semibold"
+                    >
+                      {t.today}
+                    </button>
+                  </div>
+
+                  <button 
+                    onClick={() => changeDate(1)} 
+                    className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-xs text-gray-300 rounded-lg font-bold"
                   >
-                    {t.addBtn}
+                    ถัดไป ▶
                   </button>
                 </div>
               </div>
 
-              {/* Google Calendar Time Grid Container */}
-              <div className="bg-[#1c1e22] border border-gray-800 rounded-2xl shadow-2xl p-2 sm:p-4 overflow-y-auto max-h-[75vh]">
+              {/* Google Calendar Time Grid */}
+              <div className="bg-[#1c1e22] border border-gray-800 rounded-2xl shadow-2xl p-2 sm:p-4 overflow-y-auto max-h-[72vh]">
                 <div className="relative min-w-[320px]" style={{ height: `${24 * HOUR_HEIGHT}px` }}>
                   
-                  {/* Hour Lines & Labels */}
+                  {/* Hour Lines */}
                   {hoursList.map(hour => (
                     <div 
                       key={hour} 
@@ -283,7 +341,7 @@
                     </div>
                   ))}
 
-                  {/* Tasks Positioned as Cards on Time Grid */}
+                  {/* Tasks Container */}
                   <div className="absolute left-12 right-0 top-0 bottom-0">
                     {processedTasks.map(task => {
                       const isIncubate = task.type === 'incubate';
@@ -302,12 +360,12 @@
                           }}
                           className={`absolute rounded-xl border p-2 cursor-pointer transition transform hover:z-30 hover:scale-[1.01] shadow-lg flex items-start gap-2 overflow-hidden ${
                             isIncubate 
-                              ? 'bg-purple-950/80 border-purple-500/50 text-purple-100 hover:border-purple-400' 
-                              : 'bg-blue-950/80 border-blue-500/50 text-blue-100 hover:border-blue-400'
+                              ? 'bg-purple-950/90 border-purple-500/60 text-purple-100 hover:border-purple-300' 
+                              : 'bg-blue-950/90 border-blue-500/60 text-blue-100 hover:border-blue-300'
                           }`}
                         >
-                          {/* Main Visual Icon */}
-                          <div className={`p-1 rounded-lg text-lg sm:text-xl shrink-0 ${
+                          {/* Icon */}
+                          <div className={`p-1 rounded-lg text-base sm:text-xl shrink-0 ${
                             isIncubate ? 'bg-purple-900/60' : 'bg-blue-900/60'
                           }`}>
                             {task.icon || '🧫'}
@@ -315,10 +373,25 @@
 
                           {/* Task Info */}
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-bold text-xs truncate">{task.title}</span>
+                              
+                              {/* Next Day Spill-over Badge */}
+                              {task.isSpillOverNextDay && (
+                                <span className="bg-rose-500/30 text-rose-300 text-[9px] px-1.5 py-0.5 rounded border border-rose-500/40 font-bold shrink-0">
+                                  🌙 {t.nextDayBadge} (ถึง {formatTime(task.endDateObj)})
+                                </span>
+                              )}
+                              
+                              {/* Prev Day Continuation Badge */}
+                              {task.isSpillFromPrevDay && (
+                                <span className="bg-amber-500/30 text-amber-300 text-[9px] px-1.5 py-0.5 rounded border border-amber-500/40 font-bold shrink-0">
+                                  🔄 ต่อจากเมื่อวาน
+                                </span>
+                              )}
                             </div>
-                            <div className="text-[10px] font-mono opacity-80 truncate">
+
+                            <div className="text-[10px] font-mono opacity-80 truncate mt-0.5">
                               {formatTime(task.startDateObj)} - {formatTime(task.endDateObj)}
                             </div>
                           </div>
@@ -353,13 +426,13 @@
                       <div className="flex justify-between">
                         <span className="text-gray-400">{t.start}</span>
                         <span className="font-mono text-blue-400 font-bold">
-                          {formatTime(selectedStepForDetail.startDateObj)} ({formatDate(selectedStepForDetail.startDateObj)})
+                          {formatTime(selectedStepForDetail.startDateObj)} ({formatDateStr(selectedStepForDetail.startDateObj)})
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-400">{t.end}</span>
                         <span className="font-mono text-emerald-400 font-bold">
-                          {formatTime(selectedStepForDetail.endDateObj)} ({formatDate(selectedStepForDetail.endDateObj)})
+                          {formatTime(selectedStepForDetail.endDateObj)} ({formatDateStr(selectedStepForDetail.endDateObj)})
                         </span>
                       </div>
                       <div className="flex justify-between">
